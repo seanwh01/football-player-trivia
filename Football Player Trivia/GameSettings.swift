@@ -33,7 +33,7 @@ class GameSettings: ObservableObject {
     ]
     
     @Published var yearFrom: Int = 2016
-    @Published var yearTo: Int = 2024
+    @Published var yearTo: Int = 2025
     
     @Published var sessionCorrect: Int = 0
     @Published var sessionTotal: Int = 0

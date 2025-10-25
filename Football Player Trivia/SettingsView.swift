@@ -11,6 +11,10 @@ struct SettingsView: View {
     @ObservedObject var settings: GameSettings
     @Environment(\.presentationMode) var presentationMode
     
+    @State private var isUpdating2025 = false
+    @State private var updateMessage = ""
+    @State private var showUpdateAlert = false
+    
     var body: some View {
         ZStack {
             // Background - Football field image
@@ -54,26 +58,26 @@ struct SettingsView: View {
                             .foregroundColor(.white.opacity(0.8))
                             .padding(.horizontal, 20)
                         
-                        // Sound Toggle
-                        Toggle(isOn: $settings.soundEnabled) {
-                            HStack {
-                                Image(systemName: "speaker.wave.2.fill")
-                                    .foregroundColor(.white)
-                                Text("Welcome Sound")
-                                    .foregroundColor(.white)
-                            }
-                        }
-                        .tint(.orange)
-                        .padding(.horizontal)
-                        .padding(.vertical, 8)
-                        .background(Color.black.opacity(0.5))
-                        .cornerRadius(10)
-                        .padding(.horizontal)
-                        
-                        Text("Play whistle sound when app launches")
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.8))
-                            .padding(.horizontal, 20)
+                        // Sound Toggle - COMMENTED OUT
+//                        Toggle(isOn: $settings.soundEnabled) {
+//                            HStack {
+//                                Image(systemName: "speaker.wave.2.fill")
+//                                    .foregroundColor(.white)
+//                                Text("Welcome Sound")
+//                                    .foregroundColor(.white)
+//                            }
+//                        }
+//                        .tint(.orange)
+//                        .padding(.horizontal)
+//                        .padding(.vertical, 8)
+//                        .background(Color.black.opacity(0.5))
+//                        .cornerRadius(10)
+//                        .padding(.horizontal)
+//
+//                        Text("Play whistle sound when app launches")
+//                            .font(.caption)
+//                            .foregroundColor(.white.opacity(0.8))
+//                            .padding(.horizontal, 20)
                         
                         // Hint Level Picker
                         VStack(alignment: .leading, spacing: 8) {
@@ -147,7 +151,7 @@ struct SettingsView: View {
                             Text("From:")
                                 .foregroundColor(.white)
                             Picker("From", selection: $settings.yearFrom) {
-                                ForEach(2016...2024, id: \.self) { year in
+                                ForEach(2016...2025, id: \.self) { year in
                                     Text(String(year)).tag(year)
                                 }
                             }
@@ -157,7 +161,7 @@ struct SettingsView: View {
                             Text("To:")
                                 .foregroundColor(.white)
                             Picker("To", selection: $settings.yearTo) {
-                                ForEach(2016...2024, id: \.self) { year in
+                                ForEach(2016...2025, id: \.self) { year in
                                     Text(String(year)).tag(year)
                                 }
                             }
@@ -169,6 +173,40 @@ struct SettingsView: View {
                         .background(Color.black.opacity(0.5))
                         .cornerRadius(10)
                         .padding(.horizontal)
+                    }
+                    
+                    // Data Update Section
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("2025 Season Data")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                            .padding(.horizontal)
+                        
+                        Button(action: {
+                            update2025Data()
+                        }) {
+                            HStack {
+                                Image(systemName: isUpdating2025 ? "arrow.triangle.2.circlepath" : "arrow.down.circle.fill")
+                                    .foregroundColor(.white)
+                                    .rotationEffect(isUpdating2025 ? .degrees(360) : .degrees(0))
+                                    .animation(isUpdating2025 ? Animation.linear(duration: 1).repeatForever(autoreverses: false) : .default, value: isUpdating2025)
+                                Text(isUpdating2025 ? "Updating..." : "Update 2025 Data")
+                                    .foregroundColor(.white)
+                                Spacer()
+                            }
+                            .padding(.horizontal)
+                            .padding(.vertical, 12)
+                            .background(isUpdating2025 ? Color.gray.opacity(0.5) : Color.green.opacity(0.7))
+                            .cornerRadius(10)
+                        }
+                        .disabled(isUpdating2025)
+                        .padding(.horizontal)
+                        
+                        Text("Download the latest snap count data for the 2025 season")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.8))
+                            .padding(.horizontal, 20)
                     }
                     
                     // Teams Section
@@ -241,6 +279,22 @@ struct SettingsView: View {
                         // NFC West
                         conferenceSection(title: "NFC West", teams: settings.nfcWestTeams)
                     }
+                    
+                    // Data Attribution
+                    VStack(spacing: 4) {
+                        Text("Data courtesy of the nflverse project")
+                            .font(.caption2)
+                            .foregroundColor(.white.opacity(0.6))
+                        Link("(https://github.com/nflverse)", destination: URL(string: "https://github.com/nflverse")!)
+                            .font(.caption2)
+                            .foregroundColor(.white.opacity(0.6))
+                        Text("used under the MIT License.")
+                            .font(.caption2)
+                            .foregroundColor(.white.opacity(0.6))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 20)
+                    .padding(.bottom, 10)
                 }
                 .padding(.vertical)
             }
@@ -248,7 +302,40 @@ struct SettingsView: View {
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarColorScheme(.dark, for: .navigationBar)
+        .alert("2025 Data Update", isPresented: $showUpdateAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(updateMessage)
+        }
     }
+    
+    // MARK: - Data Update Function
+    
+    private func update2025Data() {
+        isUpdating2025 = true
+        updateMessage = ""
+        
+        DataUpdateService.shared.update2025Data { result in
+            DispatchQueue.main.async {
+                self.isUpdating2025 = false
+                
+                switch result {
+                case .success(let message):
+                    self.updateMessage = message
+                    self.showUpdateAlert = true
+                    
+                    // Reload database
+                    _ = DatabaseManager.shared
+                    
+                case .failure(let error):
+                    self.updateMessage = "❌ Update failed: \(error.localizedDescription)"
+                    self.showUpdateAlert = true
+                }
+            }
+        }
+    }
+    
+    // MARK: - Helper Views
     
     // Helper view for conference sections
     @ViewBuilder

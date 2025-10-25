@@ -257,12 +257,20 @@ struct TriviaGameView: View {
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
                     
-                    Text("ℹ️ Player data © nflverse — used with permission. github.com/nflverse")
-                        .font(.system(size: 9))
-                        .foregroundColor(.white.opacity(0.6))
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                        .padding(.top, 3)
+                    VStack(spacing: 2) {
+                        Text("Data courtesy of the nflverse project")
+                            .font(.system(size: 9))
+                            .foregroundColor(.white.opacity(0.6))
+                        Link("(https://github.com/nflverse)", destination: URL(string: "https://github.com/nflverse")!)
+                            .font(.system(size: 9))
+                            .foregroundColor(.white.opacity(0.6))
+                        Text("used under the MIT License.")
+                            .font(.system(size: 9))
+                            .foregroundColor(.white.opacity(0.6))
+                    }
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+                    .padding(.top, 3)
                 }
                 .padding(.bottom, 8)
             }

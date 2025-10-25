@@ -32,9 +32,25 @@ class DatabaseManager {
     }
     
     private func openDatabase() {
-        guard let dbPath = Bundle.main.path(forResource: "football", ofType: "db") else {
-            print("❌ ERROR: Database file not found in bundle")
-            return
+        // Try to use writable database from Documents directory first (for 2025 updates)
+        let fileManager = FileManager.default
+        let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let writableDBPath = documentsURL.appendingPathComponent("football.db").path
+        
+        var dbPath: String
+        
+        // Check if writable copy exists
+        if fileManager.fileExists(atPath: writableDBPath) {
+            dbPath = writableDBPath
+            print("📂 Using writable database from Documents directory")
+        } else {
+            // Use bundled database (read-only)
+            guard let bundlePath = Bundle.main.path(forResource: "football", ofType: "db") else {
+                print("❌ ERROR: Database file not found in bundle")
+                return
+            }
+            dbPath = bundlePath
+            print("📂 Using read-only database from bundle")
         }
         
         if sqlite3_open(dbPath, &db) != SQLITE_OK {
