@@ -118,10 +118,16 @@ class FirebaseService {
             "correctPlayers": playersData,
             "position": position,
             "year": year,
-            "team": team
+            "team": team,
+            "timestamp": Date().timeIntervalSince1970  // Prevent caching
         ]
         
+        print("🔍 Calling validateAnswer with: '\(userAnswer)'")
+        let startTime = Date()
+        
         functions.httpsCallable("validateAnswer").call(data) { result, error in
+            let duration = Date().timeIntervalSince(startTime)
+            print("⏱️ validateAnswer returned in \(String(format: "%.3f", duration))s")
             if let error = error {
                 DispatchQueue.main.async {
                     completion(.failure(error))

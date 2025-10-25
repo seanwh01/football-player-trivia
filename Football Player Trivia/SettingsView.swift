@@ -11,9 +11,19 @@ struct SettingsView: View {
     @ObservedObject var settings: GameSettings
     @Environment(\.presentationMode) var presentationMode
     
+    @State private var originalPositions: Set<String> = []
+    @State private var originalYearFrom: Int = 2016
+    @State private var originalYearTo: Int = 2025
+    @State private var originalTeams: Set<String> = []
+    
     @State private var isUpdating2025 = false
     @State private var updateMessage = ""
     @State private var showUpdateAlert = false
+    @State private var showValidationAlert = false
+    @State private var validationMessage = ""
+    @State private var bannerAdRefreshTrigger: Int = 0
+    
+    @StateObject private var adManager = AdMobManager.shared
     
     var body: some View {
         ZStack {
@@ -280,6 +290,16 @@ struct SettingsView: View {
                         conferenceSection(title: "NFC West", teams: settings.nfcWestTeams)
                     }
                     
+                    // Banner Ad
+                    if bannerAdRefreshTrigger > 0 {
+                        BannerAdContainer(
+                            adUnitID: adManager.getBannerAdUnitID(),
+                            refreshTrigger: $bannerAdRefreshTrigger
+                        )
+                        .padding(.top, 20)
+                        .transition(.opacity)
+                    }
+                    
                     // Data Attribution
                     VStack(spacing: 4) {
                         Text("Data courtesy of the nflverse project")
@@ -293,7 +313,7 @@ struct SettingsView: View {
                             .foregroundColor(.white.opacity(0.6))
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.top, 20)
+                    .padding(.top, 10)
                     .padding(.bottom, 10)
                 }
                 .padding(.vertical)
@@ -301,12 +321,73 @@ struct SettingsView: View {
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(action: {
+                    if validateSettings() {
+                        presentationMode.wrappedValue.dismiss()
+                    } else {
+                        showValidationAlert = true
+                    }
+                }) {
+                    Text("Save Settings")
+                        .foregroundColor(.white)
+                        .fontWeight(.semibold)
+                }
+            }
+            
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: {
+                    // Restore original settings
+                    settings.selectedPositions = originalPositions
+                    settings.yearFrom = originalYearFrom
+                    settings.yearTo = originalYearTo
+                    settings.selectedTeams = originalTeams
+                    presentationMode.wrappedValue.dismiss()
+                }) {
+                    Text("Cancel")
+                        .foregroundColor(.white)
+                }
+            }
+        }
         .toolbarColorScheme(.dark, for: .navigationBar)
         .alert("2025 Data Update", isPresented: $showUpdateAlert) {
             Button("OK", role: .cancel) { }
         } message: {
             Text(updateMessage)
         }
+        .alert("Invalid Settings", isPresented: $showValidationAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(validationMessage)
+        }
+        .onAppear {
+            // Save original settings
+            originalPositions = settings.selectedPositions
+            originalYearFrom = settings.yearFrom
+            originalYearTo = settings.yearTo
+            originalTeams = settings.selectedTeams
+            
+            // Trigger banner ad to load
+            bannerAdRefreshTrigger += 1
+        }
+    }
+    
+    // MARK: - Validation
+    
+    private func validateSettings() -> Bool {
+        let positionCount = settings.selectedPositions.count
+        let yearCount = settings.yearTo - settings.yearFrom + 1
+        let teamCount = settings.selectedTeams.count
+        
+        // Check if all three have only one option
+        if positionCount == 1 && yearCount == 1 && teamCount == 1 {
+            validationMessage = "Cannot have only one position, one year, AND one team selected.\n\nPlease expand at least one category to have multiple options."
+            return false
+        }
+        
+        return true
     }
     
     // MARK: - Data Update Function

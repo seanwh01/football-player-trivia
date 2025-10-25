@@ -192,7 +192,7 @@ class DatabaseManager {
             return ["LB", "ILB", "MLB", "OLB"]
         case "Defensive Back":
             return ["CB", "DB", "S", "SS", "FS"]
-        case "Defensive Line":
+        case "Defensive Linemen":
             return ["DE", "DT", "DL", "NT"]
         case "Placekicker":
             return ["K", "PK"]

@@ -17,8 +17,9 @@ const openai = new OpenAI({
   apiKey: functions.config().openai.key
 });
 
-// Cache for 24 hours (86400 seconds)
-const cache = new NodeCache({ stdTTL: 86400 });
+// Cache for 30 days (2592000 seconds) - player names don't change!
+// Increase this in production to save costs long-term
+const cache = new NodeCache({ stdTTL: 2592000 });
 
 // Budget tracking (resets daily)
 let dailySpending = 0;
@@ -29,7 +30,8 @@ const CONFIG = {
   DAILY_BUDGET_LIMIT: 50, // $50 per day max
   MAX_HINTS_PER_USER_PER_DAY: 2000, // Generous for users, blocks bots
   MAX_VALIDATIONS_PER_USER_PER_DAY: 5000, // High limit for answer submissions
-  CACHE_ENABLED: true,
+  CACHE_ENABLED: false,  // DISABLED - always use fresh embedding calculations
+  CACHE_VERSION: 'v2_threshold_0.78',  // Change this to invalidate all cached results
   COST_PER_VALIDATION: 0.0005,
   COST_PER_HINT: 0.0003
 };
@@ -103,17 +105,19 @@ function incrementRateLimit(userId, action) {
 
 /**
  * Generate cache key for validation
+ * Includes version so we can invalidate cache when logic changes
  */
 function getValidationCacheKey(data) {
   const playerNames = data.correctPlayers
     .map(p => `${p.firstName}_${p.lastName}`)
     .sort()
     .join('|');
-  return `val_${data.position}_${data.year}_${data.team}_${playerNames}_${data.userAnswer.toLowerCase()}`;
+  return `${CONFIG.CACHE_VERSION}_val_${data.position}_${data.year}_${data.team}_${playerNames}_${data.userAnswer.toLowerCase()}`;
 }
 
 /**
  * Generate cache key for hints
+ * Includes version so we can invalidate cache when logic changes
  */
 function getHintCacheKey(data) {
   const playerNames = data.correctPlayers
@@ -121,7 +125,86 @@ function getHintCacheKey(data) {
     .sort()
     .join('|');
   const level = data.hintLevel || 'General';
-  return `hint_${data.position}_${data.year}_${data.team}_${playerNames}_${level}`;
+  return `${CONFIG.CACHE_VERSION}_hint_${data.position}_${data.year}_${data.team}_${playerNames}_${level}`;
+}
+
+/**
+ * Compute cosine similarity between two vectors
+ */
+function cosineSimilarity(vecA, vecB) {
+  const dotProduct = vecA.reduce((sum, a, i) => sum + a * vecB[i], 0);
+  const magnitudeA = Math.sqrt(vecA.reduce((sum, a) => sum + a * a, 0));
+  const magnitudeB = Math.sqrt(vecB.reduce((sum, b) => sum + b * b, 0));
+  return dotProduct / (magnitudeA * magnitudeB);
+}
+
+/**
+ * Check if user's answer matches using embedding similarity
+ * Returns: { isMatch, similarity, matchedPlayer }
+ * Threshold: 0.78 accepts ~2-3 character differences (e.g., "Isaah" for "Isiah")
+ */
+async function checkNameSimilarity(userAnswer, correctPlayers, threshold = 0.78) {
+  try {
+    const userAnswerClean = userAnswer.toLowerCase().trim();
+    
+    // Check for initials (reject immediately)
+    if (userAnswerClean.length < 3 || /^[a-z]\.?[a-z]\.?$/i.test(userAnswerClean)) {
+      return { isMatch: false, similarity: 0, matchedPlayer: null, reason: 'initials' };
+    }
+    
+    // Get embedding for user's answer
+    const userEmbedding = await openai.embeddings.create({
+      model: 'text-embedding-3-small',
+      input: userAnswerClean
+    });
+    
+    const userVector = userEmbedding.data[0].embedding;
+    
+    // Check similarity against each correct player
+    let bestMatch = { similarity: 0, player: null, isExact: false };
+    
+    for (const player of correctPlayers) {
+      const fullName = `${player.firstName} ${player.lastName}`.toLowerCase();
+      const firstName = player.firstName.toLowerCase();
+      const lastName = player.lastName.toLowerCase();
+      
+      // Check exact matches first (avoid API calls)
+      if (userAnswerClean === fullName || userAnswerClean === firstName || userAnswerClean === lastName) {
+        bestMatch = { similarity: 1.0, player, isExact: true };
+        break;
+      }
+      
+      // Get embeddings for all variations
+      const nameEmbeddings = await openai.embeddings.create({
+        model: 'text-embedding-3-small',
+        input: [fullName, lastName, firstName]
+      });
+      
+      // Check similarity with full name
+      const fullNameSim = cosineSimilarity(userVector, nameEmbeddings.data[0].embedding);
+      // Check similarity with last name only (very forgiving)
+      const lastNameSim = cosineSimilarity(userVector, nameEmbeddings.data[1].embedding);
+      // Check similarity with first name only
+      const firstNameSim = cosineSimilarity(userVector, nameEmbeddings.data[2].embedding);
+      
+      // Use the best similarity score
+      const maxSim = Math.max(fullNameSim, lastNameSim, firstNameSim);
+      
+      if (maxSim > bestMatch.similarity) {
+        bestMatch = { similarity: maxSim, player, isExact: false };
+      }
+    }
+    
+    return {
+      isMatch: bestMatch.similarity >= threshold,
+      similarity: bestMatch.similarity,
+      matchedPlayer: bestMatch.player,
+      isExact: bestMatch.isExact
+    };
+  } catch (error) {
+    console.error('Error in checkNameSimilarity:', error);
+    return { isMatch: false, similarity: 0, matchedPlayer: null, reason: 'error' };
+  }
 }
 
 /**
@@ -166,7 +249,9 @@ function fallbackValidation(data) {
 /**
  * CLOUD FUNCTION: Validate Answer
  * 
- * Validates user's answer using OpenAI with smart matching
+ * Uses text-embedding-3-small to compute cosine similarity between user's answer
+ * and correct player names. Threshold: 0.78 (accepts 2-3 character differences).
+ * GPT-4o-mini generates flavor text only.
  */
 exports.validateAnswer = functions.https.onCall(async (data, context) => {
   try {
@@ -184,16 +269,16 @@ exports.validateAnswer = functions.https.onCall(async (data, context) => {
       };
     }
     
-    // 2. Check cache
-    if (CONFIG.CACHE_ENABLED) {
-      const cacheKey = getValidationCacheKey(data);
-      const cached = cache.get(cacheKey);
-      if (cached) {
-        console.log('Cache hit for validation');
-        incrementRateLimit(userId, 'validation');
-        return cached;
-      }
-    }
+    // 2. Check cache - DISABLED to always use fresh embedding similarity checks
+    // if (CONFIG.CACHE_ENABLED) {
+    //   const cacheKey = getValidationCacheKey(data);
+    //   const cached = cache.get(cacheKey);
+    //   if (cached) {
+    //     console.log('Cache hit for validation');
+    //     incrementRateLimit(userId, 'validation');
+    //     return cached;
+    //   }
+    // }
     
     // 3. Check budget
     if (!checkBudget(CONFIG.COST_PER_VALIDATION)) {
@@ -205,118 +290,98 @@ exports.validateAnswer = functions.https.onCall(async (data, context) => {
       };
     }
     
-    // 4. Call OpenAI
-    const correctNames = data.correctPlayers.map(p => `${p.firstName} ${p.lastName}`).join(', ');
+    // 4. Use embedding similarity for validation
+    const similarityResult = await checkNameSimilarity(data.userAnswer, data.correctPlayers, 0.78);
     
+    console.log(`Similarity check: ${similarityResult.similarity.toFixed(3)} (threshold: 0.78) - ${similarityResult.isMatch ? 'MATCH' : 'NO MATCH'}`);
+    
+    // If initials or very short, reject immediately
+    if (similarityResult.reason === 'initials') {
+      const allNames = data.correctPlayers.map(p => `${p.firstName} ${p.lastName}`).join(', ');
+      const result = {
+        isCorrect: false,
+        message: `❌ Sorry, please provide actual names, not just initials.\n\nThe correct answer${data.correctPlayers.length > 1 ? 's were' : ' was'}: ${allNames}`
+      };
+      
+      incrementRateLimit(userId, 'validation');
+      // Cache disabled for validation
+      // if (CONFIG.CACHE_ENABLED) {
+      //   cache.set(getValidationCacheKey(data), result);
+      // }
+      
+      return result;
+    }
+    
+    const correctNames = data.correctPlayers.map(p => `${p.firstName} ${p.lastName}`).join(', ');
+    const validationIsCorrect = similarityResult.isMatch;
+    const isExact = similarityResult.isExact;
+    
+    // 5. Generate flavor text with GPT (now that we know if it's correct via embeddings)
     let prompt;
     if (data.correctPlayers.length === 1) {
       // Single player position
-      prompt = `You are an NFL trivia judge and storyteller.
-
-The trivia question was:
-- Position: ${data.position}
-- Team: ${data.team}
-- Year: ${data.year}
-
-The correct answer is: ${correctNames}
-
-The user's answer was: "${data.userAnswer}"
-
-Determine if the user's answer is close enough to be considered correct. Accept:
-- Full name (first and last)
-- Last name only
-- First name only (if distinctive and at least 3+ characters)
-- Common nicknames (at least 3+ characters)
-- Minor spelling variations (off by 1-2 letters)
-- Missing or extra letters
-- Phonetically similar spellings
-
-DO NOT ACCEPT:
-- Just initials (e.g., "TB", "PM", "JJ") - mark as INCORRECT
-- Answers shorter than 3 characters (unless it's a rare exception like "Bo" Jackson)
-
-If the answer is clearly attempting to name the correct player with actual letters (not just initials) and is reasonably similar, mark it CORRECT.
-
-Then provide a response in this format:
-
-If CORRECT:
-Start with "✅ Correct!" on its own line, then provide 2-3 interesting facts about ${correctNames}, including personal info (birthplace, college, interesting backstory) and NFL achievements from around ${data.year}. Make it engaging and fun!
-
-If INCORRECT:
-Start with "❌ Sorry, the answer was ${correctNames}." on its own line, then provide 2-3 interesting facts about the correct player, including personal info and career highlights. Make it engaging and help them learn about this player!
-
-Keep the facts concise (2-3 sentences total after the first line). Focus on memorable and interesting details.`;
-    } else {
-      // Multiple players
-      let positionType = '';
-      let count = '';
+      const matchedName = similarityResult.matchedPlayer ? `${similarityResult.matchedPlayer.firstName} ${similarityResult.matchedPlayer.lastName}` : correctNames;
       
-      switch(data.position) {
-        case 'Offensive Linemen':
-          positionType = 'offensive linemen';
-          count = 'five';
-          break;
-        case 'Defensive Back':
-          positionType = 'defensive backs';
-          count = 'four';
-          break;
-        case 'Wide Receiver':
-        case 'Linebacker':
-        case 'Defensive Line':
-          positionType = data.position.toLowerCase() + 's';
-          count = 'three';
-          break;
-        case 'Running Back':
-          positionType = 'running backs';
-          count = 'two';
-          break;
-        default:
-          positionType = data.position.toLowerCase() + 's';
-          count = 'top players';
+      if (validationIsCorrect && isExact) {
+        prompt = `You are an NFL trivia judge and storyteller.
+
+The user correctly guessed: ${matchedName}
+Position: ${data.position}, Team: ${data.team}, Year: ${data.year}
+
+Start with "✅ Correct!" on its own line, then provide 2-3 interesting facts about ${matchedName}, including personal info (birthplace, college, interesting backstory) and NFL achievements from around ${data.year}. Make it engaging and fun! Keep it concise (2-3 sentences total after the first line).`;
+      } else if (validationIsCorrect && !isExact) {
+        prompt = `You are an NFL trivia judge and storyteller.
+
+The user guessed "${data.userAnswer}" which is close enough to: ${matchedName}
+Position: ${data.position}, Team: ${data.team}, Year: ${data.year}
+
+Start with "✅ Close enough! The correct spelling is ${matchedName}." on its own line, then provide 2-3 interesting facts about the player. Acknowledge their answer was close and give them credit! Keep it concise (2-3 sentences total after the first line).`;
+      } else {
+        prompt = `You are an NFL trivia judge and storyteller.
+
+The user guessed "${data.userAnswer}" but the correct answer was: ${correctNames}
+Position: ${data.position}, Team: ${data.team}, Year: ${data.year}
+
+Start with "❌ Sorry, the answer was ${correctNames}." on its own line, then provide 2-3 interesting facts about the correct player, including personal info and career highlights. Make it engaging and help them learn! Keep it concise (2-3 sentences total after the first line).`;
       }
+    } else {
+      // Multiple player position - determine flavor based on embedding result
+      const matchedName = similarityResult.matchedPlayer ? `${similarityResult.matchedPlayer.firstName} ${similarityResult.matchedPlayer.lastName}` : null;
       
-      prompt = `You are an NFL trivia judge and storyteller.
+      if (validationIsCorrect && isExact && matchedName) {
+        prompt = `You are an NFL trivia judge and storyteller.
 
-The trivia question was to name one of the top ${count} ${positionType} by snaps played:
-- Team: ${data.team}
-- Year: ${data.year}
+The user correctly guessed: ${matchedName}
+Position: ${data.position}, Team: ${data.team}, Year: ${data.year}
+All correct answers were: ${correctNames}
 
-The correct answers are: ${correctNames}
+Start with "✅ Correct!" on its own line, then mention which player they guessed and provide 2-3 interesting facts about that player. Also mention the other correct answers. Make it engaging! Keep it concise.`;
+      } else if (validationIsCorrect && !isExact && matchedName) {
+        prompt = `You are an NFL trivia judge and storyteller.
 
-The user's answer was: "${data.userAnswer}"
+The user guessed "${data.userAnswer}" which is close enough to: ${matchedName}
+Position: ${data.position}, Team: ${data.team}, Year: ${data.year}
+All correct answers were: ${correctNames}
 
-Determine if the user's answer matches any of the correct players. Accept:
-- Full name (first and last)
-- Last name only
-- First name only (if distinctive and at least 3+ characters)
-- Common nicknames (at least 3+ characters)
-- Minor spelling variations (off by 1-2 letters)
-- Missing or extra letters
-- Phonetically similar spellings
+Start with "✅ Close enough! You got ${matchedName}." on its own line, then provide 2-3 interesting facts about that player. Acknowledge their answer was close and give them credit! Also mention the other correct answers. Keep it concise.`;
+      } else {
+        prompt = `You are an NFL trivia judge and storyteller.
 
-DO NOT ACCEPT:
-- Just initials (e.g., "TB", "PM", "JJ") - mark as INCORRECT
-- Answers shorter than 3 characters (unless it's a rare exception like "Bo" Jackson)
+The user guessed "${data.userAnswer}" but it didn't match any of the correct players: ${correctNames}
+Position: ${data.position}, Team: ${data.team}, Year: ${data.year}
 
-If the answer is clearly attempting to name one of the correct players with actual letters (not just initials) and is reasonably similar, mark it CORRECT.
-
-Then provide a response in this format:
-
-If CORRECT (matches one of the players):
-Start with "✅ Correct!" on its own line, then mention which player they guessed and provide 2-3 interesting facts about that player (personal info like birthplace, college, backstory, plus NFL achievements from around ${data.year}). Also mention the other correct answers: ${correctNames}. Make it engaging!
-
-If INCORRECT:
-Start with "❌ Sorry, the top ${count} were: ${correctNames}." on its own line, then provide 2-3 interesting facts about the most notable player from this group, including personal info and career highlights. Make it engaging and help them learn!
-
-Keep the facts concise (2-3 sentences total after the first line). Focus on memorable details.`;
+Start with "❌ Sorry, the correct answers were: ${correctNames}." on its own line, then provide 2-3 interesting facts about the most notable player from this group. Make it engaging and help them learn! Keep it concise.`;
+      }
     }
+    
+    // 6. Generate flavor text with GPT
     
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         {
           role: 'system',
-          content: 'You are a knowledgeable and enthusiastic NFL trivia host who makes learning about players fun and interesting. You are lenient with spelling variations - if someone is clearly trying to name the right player but is off by a letter or two, you mark it correct. However, you NEVER accept just initials (like "TB" or "PM") as correct answers - users must provide actual names.'
+          content: 'You are a knowledgeable and enthusiastic NFL trivia host who makes learning about players fun and interesting. Generate engaging facts and stories about NFL players. Keep responses concise (2-3 sentences after the emoji line).'
         },
         {
           role: 'user',
@@ -328,24 +393,23 @@ Keep the facts concise (2-3 sentences total after the first line). Focus on memo
     });
     
     const message = completion.choices[0].message.content.trim();
-    const isCorrect = message.includes('✅') || message.toLowerCase().startsWith('correct');
     
     const result = {
-      isCorrect,
+      isCorrect: validationIsCorrect,
       message
     };
     
-    // 5. Update tracking
+    // 7. Update tracking
     incrementSpending(CONFIG.COST_PER_VALIDATION);
     incrementRateLimit(userId, 'validation');
     
-    // 6. Cache result
-    if (CONFIG.CACHE_ENABLED) {
-      const cacheKey = getValidationCacheKey(data);
-      cache.set(cacheKey, result);
-    }
+    // 8. Cache result - DISABLED to always use fresh embedding similarity checks
+    // if (CONFIG.CACHE_ENABLED) {
+    //   const cacheKey = getValidationCacheKey(data);
+    //   cache.set(cacheKey, result);
+    // }
     
-    console.log(`Validation complete: ${isCorrect ? 'Correct' : 'Incorrect'}`);
+    console.log(`Validation complete: ${validationIsCorrect ? 'Correct' : 'Incorrect'} (similarity: ${similarityResult.similarity.toFixed(3)})`);
     return result;
     
   } catch (error) {
@@ -439,7 +503,7 @@ ${isMoreObvious ? `\n\nIMPORTANT: End your hint with a new line, then add exactl
       } else if (data.position === 'Defensive Back') {
         count = 'four';
         positionLabel = 'defensive backs';
-      } else if (['Wide Receiver', 'Linebacker', 'Defensive Line'].includes(data.position)) {
+      } else if (['Wide Receiver', 'Linebacker', 'Defensive Linemen'].includes(data.position)) {
         count = 'three';
       }
       

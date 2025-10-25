@@ -28,7 +28,7 @@ class GameSettings: ObservableObject {
         "Offensive Linemen",
         "Linebacker",
         "Defensive Back",
-        "Defensive Line",
+        "Defensive Linemen",
         "Placekicker"
     ]
     
@@ -51,9 +51,9 @@ class GameSettings: ObservableObject {
         "Wide Receiver",
         "Tight End",
         "Offensive Linemen",
+        "Defensive Linemen",
         "Linebacker",
         "Defensive Back",
-        "Defensive Line",
         "Placekicker"
     ]
     

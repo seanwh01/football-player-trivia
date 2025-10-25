@@ -31,13 +31,12 @@ struct TriviaGameView: View {
     @State private var isValidatingAnswer: Bool = false
     @State private var bannerAdRefreshTrigger: Int = 0
     @State private var isReady: Bool = false
-    @State private var pendingHintYear: Int? = nil
+    @State private var pendingHint: (year: Int, hintLevel: String)? = nil
     @State private var lastHintContext: (year: Int, position: String, team: String)? = nil
     
     @FocusState private var isTextFieldFocused: Bool
     
-    // Disabled to prevent delays - re-enable when ads are optimized
-    // @StateObject private var adManager = AdMobManager.shared
+    @StateObject private var adManager = AdMobManager.shared
     
     enum AlertType: Identifiable {
         case result
@@ -88,7 +87,7 @@ struct TriviaGameView: View {
             return "Name one of the top three Linebackers:"
         case "Defensive Back":
             return "Name one of the top four Defensive Backs:"
-        case "Defensive Line":
+        case "Defensive Linemen":
             return "Name one of the top three Defensive Linemen:"
         case "Placekicker":
             return "Name the Placekicker:"
@@ -238,16 +237,15 @@ struct TriviaGameView: View {
                 
                 Spacer(minLength: 10)
                 
-                // Banner Ad - Disabled to prevent 12 second WebView delays
-                // TODO: Re-enable after optimizing ad loading
-                // if bannerAdRefreshTrigger > 0 {
-                //     BannerAdContainer(
-                //         adUnitID: adManager.getBannerAdUnitID(),
-                //         refreshTrigger: $bannerAdRefreshTrigger
-                //     )
-                //     .padding(.bottom, 5)
-                //     .transition(.opacity)
-                // }
+                // Banner Ad
+                if bannerAdRefreshTrigger > 0 {
+                    BannerAdContainer(
+                        adUnitID: adManager.getBannerAdUnitID(),
+                        refreshTrigger: $bannerAdRefreshTrigger
+                    )
+                    .padding(.bottom, 5)
+                    .transition(.opacity)
+                }
                 
                 // Session Stats & Attribution
                 VStack(spacing: 3) {
@@ -285,6 +283,9 @@ struct TriviaGameView: View {
             isReady = true
             autoSelectSingleValues()
             setupNotifications()
+            
+            // Load first interstitial ad
+            adManager.loadInterstitialAd()
         }
         .onDisappear {
             removeNotifications()
@@ -306,7 +307,14 @@ struct TriviaGameView: View {
             yearLocked = true
         }
         
-        if yearLocked, let year = Int(selectedYear) {
+        // Auto-select team if only one team is available across all years
+        let allTeams = settings.selectedTeams
+        if allTeams.count == 1, let single = allTeams.first {
+            selectedTeam = single
+            teamLocked = true
+            bannerAdRefreshTrigger += 1
+        } else if yearLocked, let year = Int(selectedYear) {
+            // Or if year is locked, check teams for that specific year
             let teams = settings.getTeamsForYear(year)
             if teams.count == 1, let single = teams.first {
                 selectedTeam = single
@@ -373,9 +381,9 @@ struct TriviaGameView: View {
             object: nil,
             queue: .main
         ) { [self] _ in
-            if let year = pendingHintYear {
-                pendingHintYear = nil
-                generateHint(year: year)
+            if let pending = pendingHint {
+                pendingHint = nil
+                generateHint(year: pending.year, forceHintLevel: pending.hintLevel)
             }
         }
     }
@@ -422,13 +430,13 @@ struct TriviaGameView: View {
                 limit = 5
             case "Defensive Back":
                 limit = 4
-            case "Wide Receiver", "Linebacker", "Defensive Line":
+            case "Wide Receiver", "Linebacker", "Defensive Linemen":
                 limit = 3
             default: // Running Back
                 limit = 2
             }
             
-            let snapType = ["Linebacker", "Defensive Back", "Defensive Line"].contains(selectedPosition) ? "defense" : "offense"
+            let snapType = ["Linebacker", "Defensive Back", "Defensive Linemen"].contains(selectedPosition) ? "defense" : "offense"
             players = DatabaseManager.shared.getTopPlayersAtPosition(
                 position: selectedPosition,
                 year: yearInt,
@@ -468,10 +476,16 @@ struct TriviaGameView: View {
                 
                 self.activeAlert = .result
                 
+                // Refresh banner ad after submission
+                self.bannerAdRefreshTrigger += 1
+                
             case .failure(let error):
                 self.resultMessage = "Error: \(error.localizedDescription)"
                 self.isCorrect = false
                 self.activeAlert = .result
+                
+                // Refresh banner ad after submission
+                self.bannerAdRefreshTrigger += 1
             }
         }
     }
@@ -520,13 +534,13 @@ struct TriviaGameView: View {
                 limit = 5
             case "Defensive Back":
                 limit = 4
-            case "Wide Receiver", "Linebacker", "Defensive Line":
+            case "Wide Receiver", "Linebacker", "Defensive Linemen":
                 limit = 3
             default: // Running Back
                 limit = 2
             }
             
-            let snapType = ["Linebacker", "Defensive Back", "Defensive Line"].contains(selectedPosition) ? "defense" : "offense"
+            let snapType = ["Linebacker", "Defensive Back", "Defensive Linemen"].contains(selectedPosition) ? "defense" : "offense"
             players = DatabaseManager.shared.getTopPlayersAtPosition(
                 position: selectedPosition,
                 year: year,
@@ -541,6 +555,27 @@ struct TriviaGameView: View {
             self.hintMessage = "No player data found for this selection."
             self.activeAlert = .hint
             return
+        }
+        
+        // Increment hint count
+        settings.sessionHintCount += 1
+        
+        // Check if we should show an interstitial ad (every 5th hint)
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let rootViewController = windowScene.windows.first?.rootViewController {
+            
+            // Try to show interstitial ad if threshold reached
+            let adShown = adManager.showInterstitialIfNeeded(
+                hintCount: settings.sessionHintCount,
+                from: rootViewController
+            )
+            
+            if adShown {
+                // Store year and hint level for after ad dismisses
+                pendingHint = (year: year, hintLevel: hintLevel)
+                isLoadingHint = false
+                return
+            }
         }
         
         // Call Firebase to generate hint
