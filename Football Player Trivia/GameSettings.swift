@@ -25,10 +25,11 @@ class GameSettings: ObservableObject {
         "Running Back",
         "Wide Receiver",
         "Tight End",
+        "Offensive Linemen",
         "Linebacker",
-        "Cornerback",
-        "Safety",
-        "Defensive Line"
+        "Defensive Back",
+        "Defensive Line",
+        "Placekicker"
     ]
     
     @Published var yearFrom: Int = 2016
@@ -49,10 +50,11 @@ class GameSettings: ObservableObject {
         "Running Back",
         "Wide Receiver",
         "Tight End",
+        "Offensive Linemen",
         "Linebacker",
-        "Cornerback",
-        "Safety",
-        "Defensive Line"
+        "Defensive Back",
+        "Defensive Line",
+        "Placekicker"
     ]
     
     let hintLevelOptions = ["General", "More Obvious"]

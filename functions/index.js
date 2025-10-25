@@ -252,17 +252,22 @@ Keep the facts concise (2-3 sentences total after the first line). Focus on memo
       let count = '';
       
       switch(data.position) {
+        case 'Offensive Linemen':
+          positionType = 'offensive linemen';
+          count = 'five';
+          break;
+        case 'Defensive Back':
+          positionType = 'defensive backs';
+          count = 'four';
+          break;
         case 'Wide Receiver':
         case 'Linebacker':
-        case 'Cornerback':
         case 'Defensive Line':
           positionType = data.position.toLowerCase() + 's';
           count = 'three';
           break;
         case 'Running Back':
-        case 'Tight End':
-        case 'Safety':
-          positionType = data.position.toLowerCase() + 's';
+          positionType = 'running backs';
           count = 'two';
           break;
         default:
@@ -425,8 +430,20 @@ Keep the hint to 1-2 sentences.
 Focus on memorable achievements, statistics, nicknames, or career highlights from around that year.
 ${isMoreObvious ? `\n\nIMPORTANT: End your hint with a new line, then add exactly this text: "This player's initials are ${initials} and they played college football at [college name]." You MUST research and include the actual college name.` : ''}`;
     } else {
-      const count = ['Wide Receiver', 'Linebacker', 'Cornerback', 'Defensive Line'].includes(data.position) ? 'three' : 'two';
-      prompt = `You are an NFL trivia expert. The user is trying to guess one of the top ${count} ${data.position}s by snaps played with these details:
+      let count = 'two';
+      let positionLabel = data.position + 's';
+      
+      if (data.position === 'Offensive Linemen') {
+        count = 'five';
+        positionLabel = 'offensive linemen';
+      } else if (data.position === 'Defensive Back') {
+        count = 'four';
+        positionLabel = 'defensive backs';
+      } else if (['Wide Receiver', 'Linebacker', 'Defensive Line'].includes(data.position)) {
+        count = 'three';
+      }
+      
+      prompt = `You are an NFL trivia expert. The user is trying to guess one of the top ${count} ${positionLabel} by snaps played with these details:
 - Team: ${data.team}
 - Year: ${data.year}
 

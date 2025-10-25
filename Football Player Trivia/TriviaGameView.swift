@@ -81,15 +81,17 @@ struct TriviaGameView: View {
         case "Wide Receiver":
             return "Name one of the top three Wide Receivers:"
         case "Tight End":
-            return "Name one of the top two Tight Ends:"
+            return "Name the starting Tight End:"
+        case "Offensive Linemen":
+            return "Name one of the top five Offensive Linemen:"
         case "Linebacker":
             return "Name one of the top three Linebackers:"
-        case "Cornerback":
-            return "Name one of the top three Cornerbacks:"
-        case "Safety":
-            return "Name one of the top two Safeties:"
+        case "Defensive Back":
+            return "Name one of the top four Defensive Backs:"
         case "Defensive Line":
             return "Name one of the top three Defensive Linemen:"
+        case "Placekicker":
+            return "Name the Placekicker:"
         default:
             return "Name that Player:"
         }
@@ -389,23 +391,36 @@ struct TriviaGameView: View {
         
         // Get correct players from database based on position type
         let players: [Player]
-        let singlePlayerPositions = ["Quarterback", "Tight End"]
+        let singlePlayerPositions = ["Quarterback", "Tight End", "Placekicker"]
         
         if singlePlayerPositions.contains(selectedPosition) {
             // Get top 1 player for single-player positions
+            let snapType = selectedPosition == "Placekicker" ? "special_teams" : "offense"
             if let topPlayer = DatabaseManager.shared.getTopPlayerAtPosition(
                 position: selectedPosition,
                 year: yearInt,
-                team: selectedTeam
+                team: selectedTeam,
+                snapType: snapType
             ) {
                 players = [topPlayer]
             } else {
                 players = []
             }
         } else {
-            // Get top 2-3 players for multi-player positions
-            let limit = ["Wide Receiver", "Linebacker", "Cornerback", "Defensive Line"].contains(selectedPosition) ? 3 : 2
-            let snapType = ["Linebacker", "Cornerback", "Safety", "Defensive Line"].contains(selectedPosition) ? "defense" : "offense"
+            // Get top N players for multi-player positions
+            var limit: Int
+            switch selectedPosition {
+            case "Offensive Linemen":
+                limit = 5
+            case "Defensive Back":
+                limit = 4
+            case "Wide Receiver", "Linebacker", "Defensive Line":
+                limit = 3
+            default: // Running Back
+                limit = 2
+            }
+            
+            let snapType = ["Linebacker", "Defensive Back", "Defensive Line"].contains(selectedPosition) ? "defense" : "offense"
             players = DatabaseManager.shared.getTopPlayersAtPosition(
                 position: selectedPosition,
                 year: yearInt,
@@ -474,23 +489,36 @@ struct TriviaGameView: View {
         
         // Get correct players from database based on position type
         let players: [Player]
-        let singlePlayerPositions = ["Quarterback", "Tight End"]
+        let singlePlayerPositions = ["Quarterback", "Tight End", "Placekicker"]
         
         if singlePlayerPositions.contains(selectedPosition) {
             // Get top 1 player for single-player positions
+            let snapType = selectedPosition == "Placekicker" ? "special_teams" : "offense"
             if let topPlayer = DatabaseManager.shared.getTopPlayerAtPosition(
                 position: selectedPosition,
                 year: year,
-                team: selectedTeam
+                team: selectedTeam,
+                snapType: snapType
             ) {
                 players = [topPlayer]
             } else {
                 players = []
             }
         } else {
-            // Get top 2-3 players for multi-player positions
-            let limit = ["Wide Receiver", "Linebacker", "Cornerback", "Defensive Line"].contains(selectedPosition) ? 3 : 2
-            let snapType = ["Linebacker", "Cornerback", "Safety", "Defensive Line"].contains(selectedPosition) ? "defense" : "offense"
+            // Get top N players for multi-player positions
+            var limit: Int
+            switch selectedPosition {
+            case "Offensive Linemen":
+                limit = 5
+            case "Defensive Back":
+                limit = 4
+            case "Wide Receiver", "Linebacker", "Defensive Line":
+                limit = 3
+            default: // Running Back
+                limit = 2
+            }
+            
+            let snapType = ["Linebacker", "Defensive Back", "Defensive Line"].contains(selectedPosition) ? "defense" : "offense"
             players = DatabaseManager.shared.getTopPlayersAtPosition(
                 position: selectedPosition,
                 year: year,

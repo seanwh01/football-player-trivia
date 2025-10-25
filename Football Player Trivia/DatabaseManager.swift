@@ -170,14 +170,16 @@ class DatabaseManager {
             return ["WR"]
         case "Tight End":
             return ["TE"]
+        case "Offensive Linemen":
+            return ["C", "G", "LG", "RG", "T", "LT", "RT", "OL"]
         case "Linebacker":
             return ["LB", "ILB", "MLB", "OLB"]
-        case "Cornerback":
-            return ["CB", "DB"]
-        case "Safety":
-            return ["S", "SS", "FS"]
+        case "Defensive Back":
+            return ["CB", "DB", "S", "SS", "FS"]
         case "Defensive Line":
             return ["DE", "DT", "DL", "NT"]
+        case "Placekicker":
+            return ["K", "PK"]
         default:
             return []
         }
