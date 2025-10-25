@@ -30,7 +30,7 @@ const CONFIG = {
   DAILY_BUDGET_LIMIT: 50, // $50 per day max
   MAX_HINTS_PER_USER_PER_DAY: 2000, // Generous for users, blocks bots
   MAX_VALIDATIONS_PER_USER_PER_DAY: 5000, // High limit for answer submissions
-  CACHE_ENABLED: false,  // DISABLED - always use fresh embedding calculations
+  CACHE_ENABLED: true,  // ENABLED for production - 30-day cache for cost savings
   CACHE_VERSION: 'v2_threshold_0.78',  // Change this to invalidate all cached results
   COST_PER_VALIDATION: 0.0005,
   COST_PER_HINT: 0.0003
@@ -269,16 +269,16 @@ exports.validateAnswer = functions.https.onCall(async (data, context) => {
       };
     }
     
-    // 2. Check cache - DISABLED to always use fresh embedding similarity checks
-    // if (CONFIG.CACHE_ENABLED) {
-    //   const cacheKey = getValidationCacheKey(data);
-    //   const cached = cache.get(cacheKey);
-    //   if (cached) {
-    //     console.log('Cache hit for validation');
-    //     incrementRateLimit(userId, 'validation');
-    //     return cached;
-    //   }
-    // }
+    // 2. Check cache - stores full validation result (embeddings + GPT facts)
+    if (CONFIG.CACHE_ENABLED) {
+      const cacheKey = getValidationCacheKey(data);
+      const cached = cache.get(cacheKey);
+      if (cached) {
+        console.log('Cache hit for validation');
+        incrementRateLimit(userId, 'validation');
+        return cached;
+      }
+    }
     
     // 3. Check budget
     if (!checkBudget(CONFIG.COST_PER_VALIDATION)) {
@@ -295,20 +295,46 @@ exports.validateAnswer = functions.https.onCall(async (data, context) => {
     
     console.log(`Similarity check: ${similarityResult.similarity.toFixed(3)} (threshold: 0.78) - ${similarityResult.isMatch ? 'MATCH' : 'NO MATCH'}`);
     
-    // If initials or very short, reject immediately
+    // If initials or very short, reject but still provide player facts
     if (similarityResult.reason === 'initials') {
-      const allNames = data.correctPlayers.map(p => `${p.firstName} ${p.lastName}`).join(', ');
+      const correctNames = data.correctPlayers.map(p => `${p.firstName} ${p.lastName}`).join(', ');
+      
+      // Generate flavor text with GPT about the correct player
+      const prompt = `You are an NFL trivia judge and storyteller.
+
+The user provided just initials ("${data.userAnswer}") which is not accepted.
+The correct answer was: ${correctNames}
+Position: ${data.position}, Team: ${data.team}, Year: ${data.year}
+
+Start with "❌ Sorry, please provide actual names, not just initials. The answer was ${correctNames}." on its own line, then provide 2-3 interesting facts about ${correctNames}, including personal info and career highlights. Make it engaging! Keep it concise.`;
+
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a knowledgeable and enthusiastic NFL trivia host who makes learning about players fun and interesting. Generate engaging facts and stories about NFL players. Keep responses concise (2-3 sentences after the emoji line).'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        max_tokens: 200,
+        temperature: 0.7
+      });
+      
+      const message = completion.choices[0].message.content.trim();
+      
       const result = {
         isCorrect: false,
-        message: `❌ Sorry, please provide actual names, not just initials.\n\nThe correct answer${data.correctPlayers.length > 1 ? 's were' : ' was'}: ${allNames}`
+        message
       };
       
+      incrementSpending(CONFIG.COST_PER_VALIDATION);
       incrementRateLimit(userId, 'validation');
-      // Cache disabled for validation
-      // if (CONFIG.CACHE_ENABLED) {
-      //   cache.set(getValidationCacheKey(data), result);
-      // }
       
+      console.log(`Validation complete: Incorrect - initials rejected`);
       return result;
     }
     
@@ -403,11 +429,11 @@ Start with "❌ Sorry, the correct answers were: ${correctNames}." on its own li
     incrementSpending(CONFIG.COST_PER_VALIDATION);
     incrementRateLimit(userId, 'validation');
     
-    // 8. Cache result - DISABLED to always use fresh embedding similarity checks
-    // if (CONFIG.CACHE_ENABLED) {
-    //   const cacheKey = getValidationCacheKey(data);
-    //   cache.set(cacheKey, result);
-    // }
+    // 8. Cache result - stores full LLM output (validation + GPT facts)
+    if (CONFIG.CACHE_ENABLED) {
+      const cacheKey = getValidationCacheKey(data);
+      cache.set(cacheKey, result);
+    }
     
     console.log(`Validation complete: ${validationIsCorrect ? 'Correct' : 'Incorrect'} (similarity: ${similarityResult.similarity.toFixed(3)})`);
     return result;

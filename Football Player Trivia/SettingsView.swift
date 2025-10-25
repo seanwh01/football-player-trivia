@@ -157,9 +157,12 @@ struct SettingsView: View {
                             .foregroundColor(.white)
                             .padding(.horizontal)
                         
-                        HStack {
+                        HStack(spacing: 8) {
                             Text("From:")
                                 .foregroundColor(.white)
+                                .font(.system(size: 15))
+                                .frame(minWidth: 45, alignment: .trailing)
+                            
                             Picker("From", selection: $settings.yearFrom) {
                                 ForEach(2016...2025, id: \.self) { year in
                                     Text(String(year)).tag(year)
@@ -167,9 +170,13 @@ struct SettingsView: View {
                             }
                             .pickerStyle(.menu)
                             .accentColor(.white)
+                            .frame(maxWidth: .infinity)
                             
                             Text("To:")
                                 .foregroundColor(.white)
+                                .font(.system(size: 15))
+                                .frame(minWidth: 30, alignment: .trailing)
+                            
                             Picker("To", selection: $settings.yearTo) {
                                 ForEach(2016...2025, id: \.self) { year in
                                     Text(String(year)).tag(year)
@@ -177,8 +184,9 @@ struct SettingsView: View {
                             }
                             .pickerStyle(.menu)
                             .accentColor(.white)
+                            .frame(maxWidth: .infinity)
                         }
-                        .padding(.horizontal)
+                        .padding(.horizontal, 12)
                         .padding(.vertical, 8)
                         .background(Color.black.opacity(0.5))
                         .cornerRadius(10)
