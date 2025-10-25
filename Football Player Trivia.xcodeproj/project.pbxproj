@@ -6,6 +6,13 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		E5E5860B2EABBFB2003B64CC /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = E5E5860A2EABBFB2003B64CC /* FirebaseAuth */; };
+		E5E5860D2EABBFB2003B64CC /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = E5E5860C2EABBFB2003B64CC /* FirebaseCore */; };
+		E5E5860F2EABBFB2003B64CC /* FirebaseFunctions in Frameworks */ = {isa = PBXBuildFile; productRef = E5E5860E2EABBFB2003B64CC /* FirebaseFunctions */; };
+		E5E586122EABC01D003B64CC /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = E5E586112EABC01D003B64CC /* GoogleMobileAds */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		E5E585C62EABB5CB003B64CC /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -65,6 +72,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E5E586122EABC01D003B64CC /* GoogleMobileAds in Frameworks */,
+				E5E5860F2EABBFB2003B64CC /* FirebaseFunctions in Frameworks */,
+				E5E5860D2EABBFB2003B64CC /* FirebaseCore in Frameworks */,
+				E5E5860B2EABBFB2003B64CC /* FirebaseAuth in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -125,6 +136,10 @@
 			);
 			name = "Football Player Trivia";
 			packageProductDependencies = (
+				E5E5860A2EABBFB2003B64CC /* FirebaseAuth */,
+				E5E5860C2EABBFB2003B64CC /* FirebaseCore */,
+				E5E5860E2EABBFB2003B64CC /* FirebaseFunctions */,
+				E5E586112EABC01D003B64CC /* GoogleMobileAds */,
 			);
 			productName = "Football Player Trivia";
 			productReference = E5E585B12EABB5CA003B64CC /* Football Player Trivia.app */;
@@ -208,6 +223,10 @@
 			);
 			mainGroup = E5E585A82EABB5CA003B64CC;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				E5E586092EABBFB2003B64CC /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				E5E586102EABC01D003B64CC /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = E5E585B22EABB5CA003B64CC /* Products */;
 			projectDirPath = "";
@@ -294,11 +313,14 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Football Player Trivia/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Pigskin Genius";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports-games";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -328,11 +350,14 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Football Player Trivia/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Pigskin Genius";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports-games";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -595,6 +620,48 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		E5E586092EABBFB2003B64CC /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.4.0;
+			};
+		};
+		E5E586102EABC01D003B64CC /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/googleads/swift-package-manager-google-mobile-ads";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.12.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		E5E5860A2EABBFB2003B64CC /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E5E586092EABBFB2003B64CC /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		E5E5860C2EABBFB2003B64CC /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E5E586092EABBFB2003B64CC /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		E5E5860E2EABBFB2003B64CC /* FirebaseFunctions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E5E586092EABBFB2003B64CC /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFunctions;
+		};
+		E5E586112EABC01D003B64CC /* GoogleMobileAds */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E5E586102EABC01D003B64CC /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */;
+			productName = GoogleMobileAds;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = E5E585A92EABB5CA003B64CC /* Project object */;
 }
