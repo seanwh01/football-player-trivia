@@ -15,6 +15,13 @@ struct ContentView: View {
     @State private var audioPlayer: AVAudioPlayer?
     @State private var hasPlayedSound = false
     @State private var hasResetChallenge = false
+    @State private var isLoadingUpcomingGame = false
+    @State private var showGameChallengeAlert = false
+    @State private var gameChallengeMessage = ""
+    @State private var navigateToGame = false
+    @State private var showHeadToHeadSelection = false
+    @State private var showNoFavoriteTeamAlert = false
+    @State private var navigateToSettings = false
     
     var body: some View {
         NavigationView {
@@ -50,31 +57,113 @@ struct ContentView: View {
                         .padding(.top, 10)
                     
                     Spacer()
-                    Spacer()
                     
-                    // Start Button
-                    NavigationLink(destination: TriviaGameView(settings: gameSettings)) {
-                        HStack {
-                            Image(systemName: "play.fill")
-                            Text("Start Trivia")
-                                .font(.title2)
-                                .fontWeight(.semibold)
-                        }
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 50)
-                        .padding(.vertical, 18)
-                        .background(
-                            LinearGradient(
-                                gradient: Gradient(colors: [Color.green, Color.green.opacity(0.8)]),
-                                startPoint: .leading,
-                                endPoint: .trailing
+                    VStack(spacing: 16) {
+                        // Upcoming Game Challenge Button
+                        Button(action: {
+                            loadUpcomingGameChallenge()
+                        }) {
+                            VStack(spacing: 6) {
+                                HStack {
+                                    Image(systemName: isLoadingUpcomingGame ? "arrow.triangle.2.circlepath" : "calendar.badge.clock")
+                                        .rotationEffect(isLoadingUpcomingGame ? .degrees(360) : .degrees(0))
+                                        .animation(isLoadingUpcomingGame ? Animation.linear(duration: 1).repeatForever(autoreverses: false) : .default, value: isLoadingUpcomingGame)
+                                    Text(isLoadingUpcomingGame ? "Loading..." : "Upcoming Game Challenge")
+                                        .font(.title3)
+                                        .fontWeight(.semibold)
+                                }
+                                Text("Pre-load the next game for your favorite team")
+                                    .font(.caption)
+                                    .foregroundColor(.white.opacity(0.9))
+                                    .multilineTextAlignment(.center)
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [Color.orange, Color.orange.opacity(0.8)]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
                             )
-                        )
-                        .cornerRadius(15)
-                        .shadow(color: .black.opacity(0.5), radius: 10, x: 0, y: 5)
+                            .cornerRadius(12)
+                            .shadow(color: .black.opacity(0.5), radius: 10, x: 0, y: 5)
+                        }
+                        .disabled(isLoadingUpcomingGame)
+                        
+                        // Head to Head Play Button
+                        Button(action: {
+                            showHeadToHeadSelection = true
+                        }) {
+                            VStack(spacing: 6) {
+                                HStack {
+                                    Image(systemName: "person.2.fill")
+                                    Text("Head to Head Play")
+                                        .font(.title3)
+                                        .fontWeight(.semibold)
+                                }
+                                Text("Choose any two teams for a custom matchup")
+                                    .font(.caption)
+                                    .foregroundColor(.white.opacity(0.9))
+                                    .multilineTextAlignment(.center)
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.8)]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(12)
+                            .shadow(color: .black.opacity(0.5), radius: 10, x: 0, y: 5)
+                        }
+                        
+                        // Standard Trivia Button
+                        NavigationLink(destination: TriviaGameView(settings: gameSettings)) {
+                            VStack(spacing: 6) {
+                                HStack {
+                                    Image(systemName: "brain.head.profile")
+                                    Text("Standard Trivia")
+                                        .font(.title3)
+                                        .fontWeight(.semibold)
+                                }
+                                Text("Trivia questions based on Settings page")
+                                    .font(.caption)
+                                    .foregroundColor(.white.opacity(0.9))
+                                    .multilineTextAlignment(.center)
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [Color.green, Color.green.opacity(0.8)]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(12)
+                            .shadow(color: .black.opacity(0.5), radius: 10, x: 0, y: 5)
+                        }
                     }
-                    .padding(.bottom, 80)
+                    .padding(.horizontal, 30)
+                    .padding(.bottom, 50)
                 }
+                
+                // Hidden NavigationLinks for programmatic navigation
+                NavigationLink(destination: TriviaGameView(settings: gameSettings), isActive: $navigateToGame) {
+                    EmptyView()
+                }
+                .hidden()
+                
+                NavigationLink(destination: SettingsView(settings: gameSettings), isActive: $navigateToSettings) {
+                    EmptyView()
+                }
+                .hidden()
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -94,6 +183,29 @@ struct ContentView: View {
             }
         }
         .navigationViewStyle(.stack)
+        .alert("No Favorite Team", isPresented: $showNoFavoriteTeamAlert) {
+            Button("Go to Settings", role: .none) {
+                navigateToSettings = true
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Please select a favorite team in Settings before using Upcoming Game Challenge.")
+        }
+        .alert("Upcoming Game Challenge", isPresented: $showGameChallengeAlert) {
+            Button("OK", role: .cancel) {
+                if gameChallengeMessage.contains("Challenge loaded") {
+                    navigateToGame = true
+                }
+            }
+        } message: {
+            Text(gameChallengeMessage)
+        }
+        .sheet(isPresented: $showHeadToHeadSelection) {
+            HeadToHeadSelectionView(
+                settings: gameSettings,
+                shouldNavigateToGame: $navigateToGame
+            )
+        }
     }
     
     private func resetChallengeState() {
@@ -136,6 +248,58 @@ struct ContentView: View {
             print("🔊 Playing referee whistle sound!")
         } catch {
             print("❌ Failed to play sound: \(error.localizedDescription)")
+        }
+    }
+    
+    private func loadUpcomingGameChallenge() {
+        // Check if favorite team is selected
+        guard !gameSettings.favoriteTeam.isEmpty else {
+            showNoFavoriteTeamAlert = true
+            return
+        }
+        
+        isLoadingUpcomingGame = true
+        gameChallengeMessage = ""
+        
+        NFLScheduleService.shared.getNextGame(for: gameSettings.favoriteTeam) { result in
+            DispatchQueue.main.async {
+                self.isLoadingUpcomingGame = false
+                
+                switch result {
+                case .success(let game):
+                    if let game = game {
+                        // Pre-set the teams for the upcoming game
+                        let currentYear = Calendar.current.component(.year, from: Date())
+                        
+                        // Set year to current year
+                        self.gameSettings.yearFrom = currentYear
+                        self.gameSettings.yearTo = currentYear
+                        
+                        // Enable all positions for the challenge
+                        self.gameSettings.selectedPositions = Set(self.gameSettings.allPositions)
+                        
+                        // Set only the two teams playing in the game
+                        self.gameSettings.selectedTeams = Set([game.homeTeam, game.awayTeam])
+                        
+                        // Format the date
+                        let dateFormatter = DateFormatter()
+                        dateFormatter.dateStyle = .medium
+                        dateFormatter.timeStyle = .short
+                        let dateString = dateFormatter.string(from: game.date)
+                        
+                        self.gameChallengeMessage = "🏈 Challenge loaded!\n\n\(game.awayTeam) @ \(game.homeTeam)\n\(dateString)\n\nSettings configured for \(currentYear) with all positions enabled for both teams."
+                        self.showGameChallengeAlert = true
+                        
+                    } else {
+                        self.gameChallengeMessage = "No upcoming game found for \(self.gameSettings.favoriteTeam).\n\nThis could mean:\n• The season hasn't started\n• Your team's season is over\n• No games are scheduled"
+                        self.showGameChallengeAlert = true
+                    }
+                    
+                case .failure(let error):
+                    self.gameChallengeMessage = "❌ Failed to load game schedule.\n\n\(error.localizedDescription)"
+                    self.showGameChallengeAlert = true
+                }
+            }
         }
     }
     

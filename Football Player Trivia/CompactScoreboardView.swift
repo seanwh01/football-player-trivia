@@ -174,7 +174,7 @@ struct CompactScoreboardView: View {
             "NYG": Color.blue,
             "WAS": Color(red: 0.5, green: 0.2, blue: 0.2),
             "BUF": Color.blue,
-            "CIN": Color.orange,
+            "CIN": Color(red: 1.0, green: 0.5, blue: 0.0),
             "CLE": Color(red: 0.3, green: 0.15, blue: 0.0),
             "IND": Color.blue,
             "JAX": Color(red: 0.0, green: 0.4, blue: 0.4),

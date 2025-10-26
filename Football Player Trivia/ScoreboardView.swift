@@ -107,6 +107,22 @@ struct ScoreboardView: View {
             "MIN": Color(red: 0.3, green: 0.1, blue: 0.5),
             "NYG": Color.blue,
             "WAS": Color(red: 0.5, green: 0.2, blue: 0.2),
+            "CIN": Color(red: 1.0, green: 0.5, blue: 0.0),
+            "BUF": Color.blue,
+            "CLE": Color(red: 0.3, green: 0.15, blue: 0.0),
+            "IND": Color.blue,
+            "JAX": Color(red: 0.0, green: 0.4, blue: 0.4),
+            "TEN": Color(red: 0.0, green: 0.2, blue: 0.4),
+            "LAC": Color(red: 0.0, green: 0.3, blue: 0.5),
+            "LV": Color.gray,
+            "ATL": Color.red,
+            "CAR": Color.blue,
+            "NO": Color(red: 0.8, green: 0.7, blue: 0.3),
+            "TB": Color.red,
+            "ARI": Color.red,
+            "NYJ": Color(red: 0.0, green: 0.3, blue: 0.2),
+            "HOU": Color(red: 0.0, green: 0.2, blue: 0.4),
+            "DET": Color.blue
         ]
         
         return teamColors[team] ?? Color.blue

@@ -44,6 +44,7 @@ struct TriviaGameView: View {
     @State private var usedCombinations: Set<String> = []
     @State private var questionHistory: [(team: String, position: String)] = []
     @State private var questionsServed: [String: Int] = [:]
+    @State private var showLeaveGameAlert: Bool = false
     
     @FocusState private var isTextFieldFocused: Bool
     
@@ -72,6 +73,10 @@ struct TriviaGameView: View {
     
     private var isPlayerInputActive: Bool {
         positionLocked && yearLocked && teamLocked
+    }
+    
+    private var isInChallengeMode: Bool {
+        !currentGameTeams.isEmpty
     }
     
     private var availableTeamsForYear: [String] {
@@ -303,7 +308,31 @@ struct TriviaGameView: View {
         }
         .navigationTitle("Pigskin Genius")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(isInChallengeMode)
+        .toolbar {
+            if isInChallengeMode {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: {
+                        showLeaveGameAlert = true
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.left")
+                            Text("Back")
+                        }
+                        .foregroundColor(.white)
+                    }
+                }
+            }
+        }
         .toolbarColorScheme(.dark, for: .navigationBar)
+        .alert("End Game?", isPresented: $showLeaveGameAlert) {
+            Button("Leave Game", role: .destructive) {
+                leaveGame()
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Are you sure you want to end the game?")
+        }
         .alert(item: $activeAlert) { alertType in
             createAlert(for: alertType)
         }
@@ -532,6 +561,23 @@ struct TriviaGameView: View {
             }
         }
         return false
+    }
+    
+    private func leaveGame() {
+        // End challenge mode - reset to all teams
+        settings.selectedTeams = Set(settings.allTeams)
+        
+        // Reset all game state
+        teamScores = [:]
+        currentGameTeams = []
+        challengeQuestionCount = 0
+        usedCombinations = []
+        questionHistory = []
+        questionsServed = [:]
+        showGameOver = false
+        
+        // Navigate back to welcome screen
+        presentationMode.wrappedValue.dismiss()
     }
     
     private func closeGame() {
