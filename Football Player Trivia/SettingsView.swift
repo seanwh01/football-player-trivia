@@ -23,6 +23,10 @@ struct SettingsView: View {
     @State private var validationMessage = ""
     @State private var bannerAdRefreshTrigger: Int = 0
     
+    @State private var isLoadingUpcomingGame = false
+    @State private var showGameChallengeAlert = false
+    @State private var gameChallengeMessage = ""
+    
     @StateObject private var adManager = AdMobManager.shared
     
     var body: some View {
@@ -116,6 +120,70 @@ struct SettingsView: View {
                                 .foregroundColor(.white.opacity(0.8))
                                 .padding(.horizontal, 20)
                         }
+                    }
+                    
+                    // Game Challenges Section
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Game Challenges")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                            .padding(.horizontal)
+                        
+                        // Favorite Team Picker
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: "star.fill")
+                                    .foregroundColor(.white)
+                                Text("Favorite Team")
+                                    .foregroundColor(.white)
+                                Spacer()
+                                Picker("", selection: $settings.favoriteTeam) {
+                                    Text("Select Team").tag("")
+                                    ForEach(settings.allTeams.sorted(), id: \.self) { team in
+                                        Text(team).tag(team)
+                                    }
+                                }
+                                .pickerStyle(.menu)
+                                .accentColor(.white)
+                            }
+                            .padding(.horizontal)
+                            .padding(.vertical, 8)
+                            .background(Color.black.opacity(0.5))
+                            .cornerRadius(10)
+                            .padding(.horizontal)
+                            
+                            Text("Select your favorite NFL team for challenges")
+                                .font(.caption)
+                                .foregroundColor(.white.opacity(0.8))
+                                .padding(.horizontal, 20)
+                        }
+                        
+                        // Upcoming Game Challenge Button
+                        Button(action: {
+                            loadUpcomingGameChallenge()
+                        }) {
+                            HStack {
+                                Image(systemName: isLoadingUpcomingGame ? "arrow.triangle.2.circlepath" : "calendar.badge.clock")
+                                    .foregroundColor(.white)
+                                    .rotationEffect(isLoadingUpcomingGame ? .degrees(360) : .degrees(0))
+                                    .animation(isLoadingUpcomingGame ? Animation.linear(duration: 1).repeatForever(autoreverses: false) : .default, value: isLoadingUpcomingGame)
+                                Text(isLoadingUpcomingGame ? "Loading..." : "Upcoming Game Challenge")
+                                    .foregroundColor(.white)
+                                Spacer()
+                            }
+                            .padding(.horizontal)
+                            .padding(.vertical, 12)
+                            .background(settings.favoriteTeam.isEmpty ? Color.gray.opacity(0.5) : Color.orange.opacity(0.8))
+                            .cornerRadius(10)
+                        }
+                        .disabled(settings.favoriteTeam.isEmpty || isLoadingUpcomingGame)
+                        .padding(.horizontal)
+                        
+                        Text(settings.favoriteTeam.isEmpty ? "Select a favorite team to enable challenges" : "Pre-load the next game for your favorite team")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.8))
+                            .padding(.horizontal, 20)
                     }
                     
                     // Positions Section
@@ -370,6 +438,11 @@ struct SettingsView: View {
         } message: {
             Text(validationMessage)
         }
+        .alert("Upcoming Game Challenge", isPresented: $showGameChallengeAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(gameChallengeMessage)
+        }
         .onAppear {
             // Save original settings
             originalPositions = settings.selectedPositions
@@ -396,6 +469,56 @@ struct SettingsView: View {
         }
         
         return true
+    }
+    
+    // MARK: - Upcoming Game Challenge Function
+    
+    private func loadUpcomingGameChallenge() {
+        guard !settings.favoriteTeam.isEmpty else { return }
+        
+        isLoadingUpcomingGame = true
+        gameChallengeMessage = ""
+        
+        NFLScheduleService.shared.getNextGame(for: settings.favoriteTeam) { result in
+            DispatchQueue.main.async {
+                self.isLoadingUpcomingGame = false
+                
+                switch result {
+                case .success(let game):
+                    if let game = game {
+                        // Pre-set the teams for the upcoming game
+                        let currentYear = Calendar.current.component(.year, from: Date())
+                        
+                        // Set year to current year
+                        self.settings.yearFrom = currentYear
+                        self.settings.yearTo = currentYear
+                        
+                        // Enable all positions for the challenge
+                        self.settings.selectedPositions = Set(self.settings.allPositions)
+                        
+                        // Set only the two teams playing in the game
+                        self.settings.selectedTeams = Set([game.homeTeam, game.awayTeam])
+                        
+                        // Format the date
+                        let dateFormatter = DateFormatter()
+                        dateFormatter.dateStyle = .medium
+                        dateFormatter.timeStyle = .short
+                        let dateString = dateFormatter.string(from: game.date)
+                        
+                        self.gameChallengeMessage = "🏈 Challenge loaded!\n\n\(game.awayTeam) @ \(game.homeTeam)\n\(dateString)\n\nSettings configured for \(currentYear) with all positions enabled for both teams."
+                        self.showGameChallengeAlert = true
+                        
+                    } else {
+                        self.gameChallengeMessage = "No upcoming game found for \(self.settings.favoriteTeam).\n\nThis could mean:\n• The season hasn't started\n• Your team's season is over\n• No games are scheduled"
+                        self.showGameChallengeAlert = true
+                    }
+                    
+                case .failure(let error):
+                    self.gameChallengeMessage = "❌ Failed to load game schedule.\n\n\(error.localizedDescription)"
+                    self.showGameChallengeAlert = true
+                }
+            }
+        }
     }
     
     // MARK: - Data Update Function

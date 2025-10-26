@@ -17,6 +17,7 @@ class GameSettings: ObservableObject {
     private let spinHapticsEnabledKey = "spinHapticsEnabled"
     private let hintLevelKey = "hintLevel"
     private let soundEnabledKey = "soundEnabled"
+    private let favoriteTeamKey = "favoriteTeam"
     
     private var cancellables = Set<AnyCancellable>()
     
@@ -44,6 +45,7 @@ class GameSettings: ObservableObject {
     @Published var soundEnabled: Bool = true
     
     @Published var selectedTeams: Set<String> = []
+    @Published var favoriteTeam: String = ""
     
     let allPositions = [
         "Quarterback",
@@ -127,6 +129,10 @@ class GameSettings: ObservableObject {
             soundEnabled = UserDefaults.standard.bool(forKey: soundEnabledKey)
         }
         
+        if let savedFavoriteTeam = UserDefaults.standard.string(forKey: favoriteTeamKey) {
+            favoriteTeam = savedFavoriteTeam
+        }
+        
         print("✅ Settings loaded from UserDefaults")
     }
     
@@ -177,6 +183,13 @@ class GameSettings: ObservableObject {
             .dropFirst()
             .sink { [weak self] enabled in
                 UserDefaults.standard.set(enabled, forKey: self?.soundEnabledKey ?? "")
+            }
+            .store(in: &cancellables)
+        
+        $favoriteTeam
+            .dropFirst()
+            .sink { [weak self] team in
+                UserDefaults.standard.set(team, forKey: self?.favoriteTeamKey ?? "")
             }
             .store(in: &cancellables)
     }
