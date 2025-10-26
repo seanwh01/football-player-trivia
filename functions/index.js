@@ -32,7 +32,7 @@ const CONFIG = {
   MAX_HINTS_PER_USER_PER_DAY: 2000, // Generous for users, blocks bots
   MAX_VALIDATIONS_PER_USER_PER_DAY: 5000, // High limit for answer submissions
   CACHE_ENABLED: true,  // ENABLED for production - 30-day cache for cost savings
-  CACHE_VERSION: 'v4_nicknames',  // Changed to invalidate cache for nickname validation
+  CACHE_VERSION: 'v4_nicknames_test',  // Changed to clear cache for testing
   COST_PER_VALIDATION: 0.0005,
   COST_PER_HINT: 0.0003
 };

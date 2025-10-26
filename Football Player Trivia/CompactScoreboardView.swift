@@ -13,10 +13,9 @@ struct CompactScoreboardView: View {
     let questionNumber: Int
     
     private var quarterInfo: (quarter: String, progress: String) {
-        // TODO: Change back to 20 questions (5 per quarter) for production
-        // Currently: 8 questions (2 per quarter) for testing
+        // 12 questions total (3 per quarter)
         // questionNumber = number of questions ANSWERED, shows UPCOMING question
-        let questionsPerQuarter = 2  // Change to 5 for production
+        let questionsPerQuarter = 3
         let totalQuestions = questionsPerQuarter * 4
         
         if questionNumber == 0 {
