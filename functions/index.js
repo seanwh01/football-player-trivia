@@ -11,6 +11,7 @@
 const functions = require('firebase-functions');
 const OpenAI = require('openai');
 const NodeCache = require('node-cache');
+const natural = require('natural');
 
 // Initialize OpenAI with Firebase config (key stored securely in Firebase)
 const openai = new OpenAI({
@@ -31,7 +32,7 @@ const CONFIG = {
   MAX_HINTS_PER_USER_PER_DAY: 2000, // Generous for users, blocks bots
   MAX_VALIDATIONS_PER_USER_PER_DAY: 5000, // High limit for answer submissions
   CACHE_ENABLED: true,  // ENABLED for production - 30-day cache for cost savings
-  CACHE_VERSION: 'v2_threshold_0.78',  // Change this to invalidate all cached results
+  CACHE_VERSION: 'v3_levenshtein',  // Changed to invalidate cache for Levenshtein testing
   COST_PER_VALIDATION: 0.0005,
   COST_PER_HINT: 0.0003
 };
@@ -136,6 +137,109 @@ function cosineSimilarity(vecA, vecB) {
   const magnitudeA = Math.sqrt(vecA.reduce((sum, a) => sum + a * a, 0));
   const magnitudeB = Math.sqrt(vecB.reduce((sum, b) => sum + b * b, 0));
   return dotProduct / (magnitudeA * magnitudeB);
+}
+
+/**
+ * Check if two strings match phonetically using Metaphone
+ * Returns true if the phonetic codes match
+ */
+function phoneticMatch(str1, str2) {
+  const metaphone = natural.Metaphone;
+  const code1 = metaphone.process(str1);
+  const code2 = metaphone.process(str2);
+  
+  return code1 === code2;
+}
+
+/**
+ * Check if user's answer matches any player using phonetic matching
+ * This is FREE and catches common misspellings like "Drew" vs "Drue"
+ * Returns: { isMatch, matchedPlayer, matchType }
+ */
+function checkPhoneticMatch(userAnswer, correctPlayers) {
+  const userClean = userAnswer.toLowerCase().trim();
+  
+  // Split user answer into words
+  const userWords = userClean.split(/\s+/);
+  
+  for (const player of correctPlayers) {
+    const firstName = player.firstName.toLowerCase();
+    const lastName = player.lastName.toLowerCase();
+    const fullName = `${firstName} ${lastName}`;
+    
+    // Check full name match
+    if (phoneticMatch(userClean, fullName)) {
+      return { isMatch: true, matchedPlayer: player, matchType: 'phonetic_full' };
+    }
+    
+    // Check last name only
+    if (phoneticMatch(userClean, lastName)) {
+      return { isMatch: true, matchedPlayer: player, matchType: 'phonetic_last' };
+    }
+    
+    // Check first name only
+    if (phoneticMatch(userClean, firstName)) {
+      return { isMatch: true, matchedPlayer: player, matchType: 'phonetic_first' };
+    }
+    
+    // Check if user provided two words that match first and last
+    if (userWords.length === 2) {
+      if (phoneticMatch(userWords[0], firstName) && phoneticMatch(userWords[1], lastName)) {
+        return { isMatch: true, matchedPlayer: player, matchType: 'phonetic_both' };
+      }
+    }
+  }
+  
+  return { isMatch: false, matchedPlayer: null, matchType: null };
+}
+
+/**
+ * Check if user's answer is within 2 character edits of correct answer using Levenshtein distance
+ * This is FREE and catches typos like "Mahones" vs "Mahomes" (1 edit)
+ * Returns: { isMatch, matchedPlayer, matchType, distance }
+ */
+function checkLevenshteinMatch(userAnswer, correctPlayers, maxDistance = 2) {
+  const userClean = userAnswer.toLowerCase().trim();
+  
+  // Split user answer into words
+  const userWords = userClean.split(/\s+/);
+  
+  for (const player of correctPlayers) {
+    const firstName = player.firstName.toLowerCase();
+    const lastName = player.lastName.toLowerCase();
+    const fullName = `${firstName} ${lastName}`;
+    
+    // Check full name distance
+    const fullNameDist = natural.LevenshteinDistance(userClean, fullName);
+    if (fullNameDist <= maxDistance) {
+      return { isMatch: true, matchedPlayer: player, matchType: 'levenshtein_full', distance: fullNameDist };
+    }
+    
+    // Check last name only
+    const lastNameDist = natural.LevenshteinDistance(userClean, lastName);
+    if (lastNameDist <= maxDistance) {
+      return { isMatch: true, matchedPlayer: player, matchType: 'levenshtein_last', distance: lastNameDist };
+    }
+    
+    // Check first name only
+    const firstNameDist = natural.LevenshteinDistance(userClean, firstName);
+    if (firstNameDist <= maxDistance) {
+      return { isMatch: true, matchedPlayer: player, matchType: 'levenshtein_first', distance: firstNameDist };
+    }
+    
+    // Check if user provided two words - check each word separately
+    if (userWords.length === 2) {
+      const firstWordDist = natural.LevenshteinDistance(userWords[0], firstName);
+      const lastWordDist = natural.LevenshteinDistance(userWords[1], lastName);
+      
+      // Allow ≤2 total edits across both names
+      if (firstWordDist + lastWordDist <= maxDistance) {
+        return { isMatch: true, matchedPlayer: player, matchType: 'levenshtein_both', distance: firstWordDist + lastWordDist };
+      }
+    }
+  }
+  
+  return { isMatch: false, matchedPlayer: null, matchType: null, distance: null };
 }
 
 /**
@@ -290,7 +394,130 @@ exports.validateAnswer = functions.https.onCall(async (data, context) => {
       };
     }
     
-    // 4. Use embedding similarity for validation
+    // 4. First try phonetic matching (FREE - no API call!)
+    const phoneticResult = checkPhoneticMatch(data.userAnswer, data.correctPlayers);
+    
+    if (phoneticResult.isMatch) {
+      console.log(`✅ Phonetic match found! Type: ${phoneticResult.matchType} (saved API cost)`);
+      
+      // Use phonetic match result - treat as correct but acknowledge spelling
+      const matchedName = `${phoneticResult.matchedPlayer.firstName} ${phoneticResult.matchedPlayer.lastName}`;
+      const isExactSpelling = data.userAnswer.toLowerCase().trim() === matchedName.toLowerCase();
+      
+      let prompt;
+      if (isExactSpelling) {
+        prompt = `You are an NFL trivia judge and storyteller.
+
+The user correctly guessed: ${matchedName}
+Position: ${data.position}, Team: ${data.team}, Year: ${data.year}
+
+Start with "✅ Correct!" on its own line, then provide 2-3 interesting facts about ${matchedName}, including personal info (birthplace, college, interesting backstory) and NFL achievements from around ${data.year}. Make it engaging and fun! Keep it concise (2-3 sentences total after the first line).`;
+      } else {
+        prompt = `You are an NFL trivia judge and storyteller.
+
+The user guessed "${data.userAnswer}" which sounds like: ${matchedName}
+Position: ${data.position}, Team: ${data.team}, Year: ${data.year}
+
+Start with "✅ Correct! (The spelling is ${matchedName})" on its own line, then provide 2-3 interesting facts about the player. Acknowledge their answer was phonetically correct! Keep it concise (2-3 sentences total after the first line).`;
+      }
+      
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a knowledgeable and enthusiastic NFL trivia host who makes learning about players fun and interesting. Generate engaging facts and stories about NFL players. Keep responses concise (2-3 sentences after the emoji line).'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        max_tokens: 200,
+        temperature: 0.7
+      });
+      
+      const message = completion.choices[0].message.content.trim();
+      
+      const result = {
+        isCorrect: true,
+        message
+      };
+      
+      incrementSpending(CONFIG.COST_PER_VALIDATION);
+      incrementRateLimit(userId, 'validation');
+      
+      if (CONFIG.CACHE_ENABLED) {
+        const cacheKey = getValidationCacheKey(data);
+        cache.set(cacheKey, result);
+      }
+      
+      return result;
+    }
+    
+    // 5. Try Levenshtein distance check (FREE - catches typos like "Mahones" vs "Mahomes")
+    const levenshteinResult = checkLevenshteinMatch(data.userAnswer, data.correctPlayers, 2);
+    
+    if (levenshteinResult.isMatch) {
+      console.log(`✅ Levenshtein match found! Type: ${levenshteinResult.matchType}, Distance: ${levenshteinResult.distance} (saved API cost)`);
+      
+      // Use Levenshtein match result - treat as correct but acknowledge typo
+      const matchedName = `${levenshteinResult.matchedPlayer.firstName} ${levenshteinResult.matchedPlayer.lastName}`;
+      const isExactSpelling = data.userAnswer.toLowerCase().trim() === matchedName.toLowerCase();
+      
+      let prompt;
+      if (isExactSpelling) {
+        prompt = `You are an NFL trivia judge and storyteller.
+
+The user correctly guessed: ${matchedName}
+Position: ${data.position}, Team: ${data.team}, Year: ${data.year}
+
+Start with "✅ Correct!" on its own line, then provide 2-3 interesting facts about ${matchedName}, including personal info (birthplace, college, interesting backstory) and NFL achievements from around ${data.year}. Make it engaging and fun! Keep it concise (2-3 sentences total after the first line).`;
+      } else {
+        prompt = `You are an NFL trivia judge and storyteller.
+
+The user guessed "${data.userAnswer}" which is very close to: ${matchedName}
+Position: ${data.position}, Team: ${data.team}, Year: ${data.year}
+
+Start with "✅ Close enough! The correct spelling is ${matchedName}." on its own line, then provide 2-3 interesting facts about the player. Acknowledge their answer was almost correct! Keep it concise (2-3 sentences total after the first line).`;
+      }
+      
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a knowledgeable and enthusiastic NFL trivia host who makes learning about players fun and interesting. Generate engaging facts and stories about NFL players. Keep responses concise (2-3 sentences after the emoji line).'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        max_tokens: 200,
+        temperature: 0.7
+      });
+      
+      const message = completion.choices[0].message.content.trim();
+      
+      const result = {
+        isCorrect: true,
+        message
+      };
+      
+      incrementSpending(CONFIG.COST_PER_VALIDATION);
+      incrementRateLimit(userId, 'validation');
+      
+      if (CONFIG.CACHE_ENABLED) {
+        const cacheKey = getValidationCacheKey(data);
+        cache.set(cacheKey, result);
+      }
+      
+      return result;
+    }
+    
+    // 6. If all free checks fail, use embedding similarity for validation
+    console.log('No phonetic or Levenshtein match, using embedding similarity...');
     const similarityResult = await checkNameSimilarity(data.userAnswer, data.correctPlayers, 0.78);
     
     console.log(`Similarity check: ${similarityResult.similarity.toFixed(3)} (threshold: 0.78) - ${similarityResult.isMatch ? 'MATCH' : 'NO MATCH'}`);
@@ -342,7 +569,7 @@ Start with "❌ Sorry, please provide actual names, not just initials. The answe
     const validationIsCorrect = similarityResult.isMatch;
     const isExact = similarityResult.isExact;
     
-    // 5. Generate flavor text with GPT (now that we know if it's correct via embeddings)
+    // 7. Generate flavor text with GPT (now that we know if it's correct via embeddings)
     let prompt;
     if (data.correctPlayers.length === 1) {
       // Single player position
@@ -400,7 +627,7 @@ Start with "❌ Sorry, the correct answers were: ${correctNames}." on its own li
       }
     }
     
-    // 6. Generate flavor text with GPT
+    // 8. Generate flavor text with GPT
     
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -425,11 +652,11 @@ Start with "❌ Sorry, the correct answers were: ${correctNames}." on its own li
       message
     };
     
-    // 7. Update tracking
+    // 9. Update tracking
     incrementSpending(CONFIG.COST_PER_VALIDATION);
     incrementRateLimit(userId, 'validation');
     
-    // 8. Cache result - stores full LLM output (validation + GPT facts)
+    // 10. Cache result - stores full LLM output (validation + GPT facts)
     if (CONFIG.CACHE_ENABLED) {
       const cacheKey = getValidationCacheKey(data);
       cache.set(cacheKey, result);

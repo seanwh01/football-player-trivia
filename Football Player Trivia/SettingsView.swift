@@ -26,6 +26,7 @@ struct SettingsView: View {
     @State private var isLoadingUpcomingGame = false
     @State private var showGameChallengeAlert = false
     @State private var gameChallengeMessage = ""
+    @State private var navigateToGame = false
     
     @StateObject private var adManager = AdMobManager.shared
     
@@ -439,10 +440,21 @@ struct SettingsView: View {
             Text(validationMessage)
         }
         .alert("Upcoming Game Challenge", isPresented: $showGameChallengeAlert) {
-            Button("OK", role: .cancel) { }
+            Button("OK", role: .cancel) {
+                // Check if we successfully loaded a game challenge
+                if gameChallengeMessage.contains("Challenge loaded") {
+                    navigateToGame = true
+                }
+            }
         } message: {
             Text(gameChallengeMessage)
         }
+        .background(
+            NavigationLink(destination: TriviaGameView(settings: settings), isActive: $navigateToGame) {
+                EmptyView()
+            }
+            .hidden()
+        )
         .onAppear {
             // Save original settings
             originalPositions = settings.selectedPositions

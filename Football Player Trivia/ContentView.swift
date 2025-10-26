@@ -14,6 +14,7 @@ struct ContentView: View {
     @StateObject private var gameSettings = GameSettings()
     @State private var audioPlayer: AVAudioPlayer?
     @State private var hasPlayedSound = false
+    @State private var hasResetChallenge = false
     
     var body: some View {
         NavigationView {
@@ -89,9 +90,27 @@ struct ContentView: View {
             .onAppear {
                 requestTrackingPermission()
                 playWhistleSoundOnce()
+                resetChallengeState()
             }
         }
         .navigationViewStyle(.stack)
+    }
+    
+    private func resetChallengeState() {
+        // Only reset once per app session, not every time ContentView appears
+        guard !hasResetChallenge else {
+            return
+        }
+        
+        // Clear any challenge game state from previous session
+        // This ensures the app starts fresh without an active challenge
+        // Users must go to Settings -> Upcoming Game Challenge to start a new game
+        if gameSettings.selectedTeams.count == 2 {
+            print("🔄 Clearing previous challenge state - resetting to all teams")
+            gameSettings.selectedTeams = Set(gameSettings.allTeams)
+        }
+        
+        hasResetChallenge = true
     }
     
     private func playWhistleSoundOnce() {
@@ -99,8 +118,8 @@ struct ContentView: View {
             return
         }
         
-        guard let soundURL = Bundle.main.url(forResource: "WhistleSound", withExtension: "m4a") else {
-            print("ℹ️ WhistleSound.m4a not found - skipping sound")
+        guard let soundURL = Bundle.main.url(forResource: "referee-whistle", withExtension: "mp3") else {
+            print("ℹ️ referee-whistle.mp3 not found - skipping sound")
             hasPlayedSound = true // Mark as played so we don't keep trying
             return
         }
@@ -114,7 +133,7 @@ struct ContentView: View {
             audioPlayer?.play()
             
             hasPlayedSound = true
-            print("🔊 Playing whistle sound!")
+            print("🔊 Playing referee whistle sound!")
         } catch {
             print("❌ Failed to play sound: \(error.localizedDescription)")
         }
