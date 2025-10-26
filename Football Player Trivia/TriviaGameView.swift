@@ -410,16 +410,14 @@ struct TriviaGameView: View {
                 title: Text("Result"),
                 message: Text(resultMessage),
                 dismissButton: .default(Text("Next Question")) {
-                    // Check if game over after final question (8 for testing, 20 for production)
-                    // TODO: Change to 20 for production
-                    if !currentGameTeams.isEmpty && challengeQuestionCount == 8 {
+                    // Check if game over after final question (12 questions per game)
+                    if !currentGameTeams.isEmpty && challengeQuestionCount == 12 {
                         showGameOver = true
                         return
                     }
                     
-                    // Check if halftime after Q2 of 8 (after question 4)
-                    // TODO: Change back to question 10 (after Q2 of 20) for production
-                    if !currentGameTeams.isEmpty && challengeQuestionCount == 4 {
+                    // Check if halftime after Q2 of 12 (after question 6)
+                    if !currentGameTeams.isEmpty && challengeQuestionCount == 6 {
                         showHalftimeShow = true
                     }
                     resetForNextQuestion()

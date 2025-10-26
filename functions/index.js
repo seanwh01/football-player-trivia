@@ -32,7 +32,7 @@ const CONFIG = {
   MAX_HINTS_PER_USER_PER_DAY: 2000, // Generous for users, blocks bots
   MAX_VALIDATIONS_PER_USER_PER_DAY: 5000, // High limit for answer submissions
   CACHE_ENABLED: true,  // ENABLED for production - 30-day cache for cost savings
-  CACHE_VERSION: 'v3_levenshtein',  // Changed to invalidate cache for Levenshtein testing
+  CACHE_VERSION: 'v4_nicknames',  // Changed to invalidate cache for nickname validation
   COST_PER_VALIDATION: 0.0005,
   COST_PER_HINT: 0.0003
 };
@@ -566,10 +566,60 @@ Start with "❌ Sorry, please provide actual names, not just initials. The answe
     }
     
     const correctNames = data.correctPlayers.map(p => `${p.firstName} ${p.lastName}`).join(', ');
-    const validationIsCorrect = similarityResult.isMatch;
+    let validationIsCorrect = similarityResult.isMatch;
     const isExact = similarityResult.isExact;
     
-    // 7. Generate flavor text with GPT (now that we know if it's correct via embeddings)
+    // 7. If embedding check failed, use GPT-4o-mini to check for acceptable nicknames
+    if (!validationIsCorrect) {
+      console.log('Embedding check failed, checking for acceptable nicknames with GPT-4o-mini...');
+      
+      const nicknamePrompt = `You are an NFL trivia validator checking if a user's answer is an acceptable nickname or alternate name for a player.
+
+User's answer: "${data.userAnswer}"
+Correct player(s): ${correctNames}
+Position: ${data.position}, Team: ${data.team}, Year: ${data.year}
+
+Is "${data.userAnswer}" a commonly accepted nickname, shortened name, or alternate name for any of these players?
+
+Examples of acceptable nicknames:
+- "Megatron" for Calvin Johnson
+- "Beast Mode" for Marshawn Lynch
+- "Sweetness" for Walter Payton
+- "Prime Time" for Deion Sanders
+- "Flash" for Desean Jackson
+- "AJ" for A.J. Green
+- "Pat" for Patrick Mahomes
+- "Josh" for Joshua Allen
+
+Respond with ONLY "YES" or "NO" - nothing else.`;
+
+      const nicknameCheck = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an NFL nickname validator. Respond with only YES or NO.'
+          },
+          {
+            role: 'user',
+            content: nicknamePrompt
+          }
+        ],
+        max_tokens: 10,
+        temperature: 0
+      });
+      
+      const nicknameResponse = nicknameCheck.choices[0].message.content.trim().toUpperCase();
+      
+      if (nicknameResponse === 'YES') {
+        console.log('✅ Nickname accepted by GPT-4o-mini override!');
+        validationIsCorrect = true;
+      } else {
+        console.log('❌ Nickname not accepted');
+      }
+    }
+    
+    // 8. Generate flavor text with GPT (now that we know if it's correct via embeddings or nickname check)
     let prompt;
     if (data.correctPlayers.length === 1) {
       // Single player position
@@ -583,12 +633,24 @@ Position: ${data.position}, Team: ${data.team}, Year: ${data.year}
 
 Start with "✅ Correct!" on its own line, then provide 2-3 interesting facts about ${matchedName}, including personal info (birthplace, college, interesting backstory) and NFL achievements from around ${data.year}. Make it engaging and fun! Keep it concise (2-3 sentences total after the first line).`;
       } else if (validationIsCorrect && !isExact) {
-        prompt = `You are an NFL trivia judge and storyteller.
+        // Check if this was a nickname match
+        const wasNicknameMatch = !similarityResult.isMatch;
+        
+        if (wasNicknameMatch) {
+          prompt = `You are an NFL trivia judge and storyteller.
+
+The user guessed "${data.userAnswer}" which is an accepted nickname for: ${matchedName}
+Position: ${data.position}, Team: ${data.team}, Year: ${data.year}
+
+Start with "✅ Correct! '${data.userAnswer}' is a great nickname for ${matchedName}!" on its own line, then provide 2-3 interesting facts about the player. Acknowledge their creative answer! Keep it concise (2-3 sentences total after the first line).`;
+        } else {
+          prompt = `You are an NFL trivia judge and storyteller.
 
 The user guessed "${data.userAnswer}" which is close enough to: ${matchedName}
 Position: ${data.position}, Team: ${data.team}, Year: ${data.year}
 
 Start with "✅ Close enough! The correct spelling is ${matchedName}." on its own line, then provide 2-3 interesting facts about the player. Acknowledge their answer was close and give them credit! Keep it concise (2-3 sentences total after the first line).`;
+        }
       } else {
         prompt = `You are an NFL trivia judge and storyteller.
 
