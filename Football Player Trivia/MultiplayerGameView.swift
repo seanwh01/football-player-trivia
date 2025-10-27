@@ -211,7 +211,7 @@ struct MultiplayerGameView: View {
                             .padding(.horizontal, 40)
                         
                         Button(action: {
-                            viewModel.submitAnswer()
+                            viewModel.submitAnswer(viewModel.userAnswer)
                         }) {
                             Text("Submit Answer")
                                 .font(.system(size: 20, weight: .bold))
