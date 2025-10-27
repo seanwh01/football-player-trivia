@@ -27,6 +27,7 @@ class MultiplayerGameViewModel: ObservableObject {
     @Published var isFinalLeaderboard = false
     @Published var leaderboard: [LeaderboardEntry] = []
     @Published var leaderboardTimeRemaining: TimeInterval = 5.0
+    @Published var answerDisplayTimeRemaining: TimeInterval = 5.0
     @Published var showLeaveConfirmation = false
     
     // MARK: - Private Properties
@@ -34,8 +35,9 @@ class MultiplayerGameViewModel: ObservableObject {
     private let multiplayerManager: MultiplayerManager
     private var questionTimer: Timer?
     private var leaderboardTimer: Timer?
+    private var answerDisplayTimer: Timer?
     private var answerStartTime: Date?
-    private var playerAnswers: [String: PlayerAnswer] = [:]
+    private var playerAnswers: [String: PlayerAnswer] = []
     
     var totalQuestions: Int {
         multiplayerManager.gameSettings?.questionCount ?? 12
@@ -241,6 +243,31 @@ class MultiplayerGameViewModel: ObservableObject {
         // Broadcast to all players
         multiplayerManager.broadcastLeaderboard(entries)
         
+        // Show answer for 5 seconds, then leaderboard
+        startAnswerDisplayTimer()
+    }
+    
+    private func startAnswerDisplayTimer() {
+        answerDisplayTimeRemaining = 5.0
+        
+        answerDisplayTimer?.invalidate()
+        answerDisplayTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            
+            Task { @MainActor in
+                self.answerDisplayTimeRemaining -= 0.1
+                
+                if self.answerDisplayTimeRemaining <= 0 {
+                    self.hideAnswerAndShowLeaderboard()
+                }
+            }
+        }
+    }
+    
+    private func hideAnswerAndShowLeaderboard() {
+        answerDisplayTimer?.invalidate()
+        answerDisplayTimer = nil
+        
         // Show leaderboard
         showLeaderboard = true
         isFinalLeaderboard = currentQuestionNumber >= totalQuestions
@@ -326,8 +353,11 @@ class MultiplayerGameViewModel: ObservableObject {
         leaderboardTimer = nil
         showLeaderboard = false
         
-        // Host will manually spin for the next question
-        // No auto-load here - return to spin screen
+        // Auto-load next question for host
+        if multiplayerManager.isHost {
+            multiplayerManager.broadcastNextQuestion()
+            loadNextQuestion()
+        }
     }
     
     // MARK: - Game End
@@ -335,6 +365,7 @@ class MultiplayerGameViewModel: ObservableObject {
     private func endGame() {
         stopQuestionTimer()
         leaderboardTimer?.invalidate()
+        answerDisplayTimer?.invalidate()
         
         showLeaderboard = false
         showFinalResults = true
@@ -358,6 +389,7 @@ class MultiplayerGameViewModel: ObservableObject {
     deinit {
         questionTimer?.invalidate()
         leaderboardTimer?.invalidate()
+        answerDisplayTimer?.invalidate()
     }
 }
 

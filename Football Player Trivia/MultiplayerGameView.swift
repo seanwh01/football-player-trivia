@@ -35,8 +35,6 @@ struct MultiplayerGameView: View {
                     finalResultsView
                 } else if viewModel.currentQuestion != nil {
                     questionView
-                } else if multiplayerManager.isHost {
-                    hostSpinView
                 }
                 
                 // Banner Ad
@@ -72,6 +70,9 @@ struct MultiplayerGameView: View {
         }
         .onAppear {
             viewModel.setupCallbacks()
+            if multiplayerManager.isHost {
+                viewModel.loadNextQuestion()
+            }
         }
     }
     
@@ -219,8 +220,10 @@ struct MultiplayerGameView: View {
                             .foregroundColor(.white)
                         
                         Text("Answer: \(question.fullPlayerName)")
-                            .font(.headline)
+                            .font(.system(size: 28, weight: .bold))
                             .foregroundColor(.orange)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 20)
                         
                         if !multiplayerManager.isHost {
                             Text("Waiting for all players...")
