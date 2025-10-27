@@ -319,11 +319,17 @@ class MultiplayerGameViewModel: ObservableObject {
     
     private func updateLeaderboard(_ entries: [LeaderboardEntry]) {
         leaderboard = entries
-        showLeaderboard = true
         isFinalLeaderboard = currentQuestionNumber >= totalQuestions
         
-        if !isFinalLeaderboard && !multiplayerManager.isHost {
-            startLeaderboardTimer()
+        // Players: show answer for 5 seconds first, then leaderboard
+        if !multiplayerManager.isHost {
+            startAnswerDisplayTimer()
+        } else {
+            // Host already showing answer, just show leaderboard
+            showLeaderboard = true
+            if !isFinalLeaderboard {
+                startLeaderboardTimer()
+            }
         }
     }
     
