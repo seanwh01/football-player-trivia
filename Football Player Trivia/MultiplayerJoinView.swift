@@ -26,11 +26,17 @@ struct MultiplayerJoinView: View {
                     .ignoresSafeArea()
                 
                 VStack(spacing: 24) {
+                    // Logo
+                    Image("PigskinGeniusLogo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(height: 60)
+                        .padding(.top, 20)
+                    
                     // Title
                     Text("Join Multiplayer Game")
                         .font(.system(size: 28, weight: .bold))
                         .foregroundColor(.white)
-                        .padding(.top, 40)
                     
                     if !isBrowsing {
                         // Name Input

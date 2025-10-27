@@ -21,11 +21,17 @@ struct MultiplayerLobbyView: View {
                 .ignoresSafeArea()
             
             VStack(spacing: 30) {
+                // Logo
+                Image("PigskinGeniusLogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 60)
+                    .padding(.top, 20)
+                
                 // Title
                 Text(multiplayerManager.isHost ? "Game Lobby" : "Waiting for Host")
                     .font(.system(size: 32, weight: .bold))
                     .foregroundColor(.white)
-                    .padding(.top, 40)
                 
                 // Game Settings (Host only)
                 if multiplayerManager.isHost, let settings = multiplayerManager.gameSettings {

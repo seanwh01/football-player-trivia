@@ -163,6 +163,13 @@ struct MultiplayerGameView: View {
     
     private var questionView: some View {
         VStack(spacing: 24) {
+            // Logo
+            Image("PigskinGeniusLogo")
+                .resizable()
+                .scaledToFit()
+                .frame(height: 50)
+                .padding(.top, 10)
+            
             Spacer()
             
             if let question = viewModel.currentQuestion {
@@ -250,10 +257,16 @@ struct MultiplayerGameView: View {
     
     private var leaderboardView: some View {
         VStack(spacing: 24) {
+            // Logo
+            Image("PigskinGeniusLogo")
+                .resizable()
+                .scaledToFit()
+                .frame(height: 60)
+                .padding(.top, 20)
+            
             Text(viewModel.isFinalLeaderboard ? "Final Scores" : "Leaderboard")
                 .font(.system(size: 36, weight: .bold))
                 .foregroundColor(.white)
-                .padding(.top, 40)
             
             ScrollView {
                 VStack(spacing: 12) {
@@ -295,16 +308,10 @@ struct MultiplayerGameView: View {
             Spacer()
             
             // Score
-            VStack(alignment: .trailing, spacing: 2) {
-                Text("\(entry.score) pts")
-                    .font(.headline)
-                    .fontWeight(.bold)
-                    .foregroundColor(.orange)
-                
-                Text(String(format: "%.1fs avg", entry.averageResponseTime))
-                    .font(.caption)
-                    .foregroundColor(.white.opacity(0.6))
-            }
+            Text("\(entry.score) pts")
+                .font(.headline)
+                .fontWeight(.bold)
+                .foregroundColor(.orange)
         }
         .padding()
         .background(rank <= 3 ? Color.white.opacity(0.15) : Color.white.opacity(0.08))
