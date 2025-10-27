@@ -10,6 +10,13 @@
 	<string>ca-app-pub-5788734405171958~4143602636</string>
 	<key>NSUserTrackingUsageDescription</key>
 	<string>This identifier will be used to deliver personalized ads to you.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>This app uses the local network to find and connect with nearby players for multiplayer trivia games.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_nfl-trivia._tcp</string>
+		<string>_nfl-trivia._udp</string>
+	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
