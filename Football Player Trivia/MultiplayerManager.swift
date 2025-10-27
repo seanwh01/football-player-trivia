@@ -155,11 +155,11 @@ class MultiplayerManager: NSObject, ObservableObject {
     // MARK: - Player Methods
     
     func submitAnswer(_ answer: String, isCorrect: Bool, responseTime: TimeInterval) {
-        let message = GameMessage.answer(playerID: peerID.displayName, answer: answer, isCorrect: isCorrect, responseTime: responseTime)
+        let message = GameMessage.answer(playerID: playerName, answer: answer, isCorrect: isCorrect, responseTime: responseTime)
         
         if isHost {
             // Host processes own answer
-            onAnswerReceived?(peerID.displayName, answer, isCorrect, responseTime)
+            onAnswerReceived?(playerName, answer, isCorrect, responseTime)
         } else {
             // Send to host
             sendToHost(message)

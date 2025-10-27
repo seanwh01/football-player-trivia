@@ -179,7 +179,7 @@ struct MultiplayerGameView: View {
                             .foregroundColor(.orange)
                         Text("•")
                             .foregroundColor(.white.opacity(0.5))
-                        Text("\(question.year)")
+                        Text(String(question.year))
                             .font(.subheadline)
                             .foregroundColor(.orange)
                     }
