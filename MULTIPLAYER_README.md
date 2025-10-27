@@ -6,7 +6,7 @@ Interactive multiplayer trivia game using Apple's Multipeer Connectivity framewo
 ## Features
 - ✅ **Host-based multiplayer** (1 host + up to 7 players)
 - ✅ **Automatic device discovery** via Multipeer Connectivity
-- ✅ **10-second answer timer** with visual countdown
+- ✅ **20-second answer timer** with visual countdown
 - ✅ **Live leaderboard** (5-second display between questions)
 - ✅ **Customizable game parameters** (positions, teams, years, question count)
 - ✅ **Real-time scoring** based on speed and accuracy
@@ -37,17 +37,17 @@ Interactive multiplayer trivia game using Apple's Multipeer Connectivity framewo
 3. Tap "Find Nearby Games"
 4. Select host from list of available games
 5. Wait in lobby for host to start
-6. Answer questions within 10 seconds
+6. Answer questions within 20 seconds
 7. View leaderboard after each question
 8. See final scores and winner
 
 ## Scoring System
 - **10 points max** per correct answer
 - **Points decrease** based on response time:
-  - 0-1 seconds: 10 points
-  - 1-2 seconds: 9 points
+  - 0-2 seconds: 10 points
+  - 2-4 seconds: 9 points
   - ...continuing...
-  - 9-10 seconds: 1 point
+  - 18-20 seconds: 1 point
 - **0 points** for incorrect answers or timeouts
 
 ## Technical Implementation

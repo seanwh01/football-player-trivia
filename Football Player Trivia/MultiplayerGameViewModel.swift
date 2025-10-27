@@ -18,7 +18,7 @@ class MultiplayerGameViewModel: ObservableObject {
     @Published var userAnswer = ""
     @Published var hasAnswered = false
     @Published var lastAnswerCorrect = false
-    @Published var timeRemaining: TimeInterval = 10.0
+    @Published var timeRemaining: TimeInterval = 20.0
     @Published var isTimerRunning = false
     @Published var currentQuestionNumber = 0
     @Published var currentPlayerScore = 0
@@ -161,7 +161,7 @@ class MultiplayerGameViewModel: ObservableObject {
         
         if isCorrect {
             // Award points based on speed (10 points max, decreases with time)
-            let points = max(1, 10 - Int(responseTime))
+            let points = max(1, 10 - Int(responseTime / 2))
             currentPlayerScore += points
         }
         
@@ -172,7 +172,7 @@ class MultiplayerGameViewModel: ObservableObject {
     private func receiveAnswer(from playerID: String, answer: String, isCorrect: Bool, responseTime: TimeInterval) {
         guard multiplayerManager.isHost else { return }
         
-        let points = isCorrect ? max(1, 10 - Int(responseTime)) : 0
+        let points = isCorrect ? max(1, 10 - Int(responseTime / 2)) : 0
         
         playerAnswers[playerID] = PlayerAnswer(
             answer: answer,
@@ -191,7 +191,7 @@ class MultiplayerGameViewModel: ObservableObject {
     // MARK: - Timer Management
     
     private func startQuestionTimer() {
-        timeRemaining = 10.0
+        timeRemaining = 20.0
         isTimerRunning = true
         answerStartTime = Date()
         
@@ -223,7 +223,7 @@ class MultiplayerGameViewModel: ObservableObject {
             lastAnswerCorrect = false
             
             // Submit as incorrect with max time
-            multiplayerManager.submitAnswer("", isCorrect: false, responseTime: 10.0)
+            multiplayerManager.submitAnswer("", isCorrect: false, responseTime: 20.0)
         }
     }
     
@@ -351,7 +351,7 @@ class MultiplayerGameViewModel: ObservableObject {
         userAnswer = ""
         hasAnswered = false
         lastAnswerCorrect = false
-        timeRemaining = 10.0
+        timeRemaining = 20.0
         playerAnswers.removeAll()
     }
     

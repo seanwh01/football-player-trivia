@@ -2,7 +2,7 @@
 //  MultiplayerGameView.swift
 //  Football Player Trivia
 //
-//  Main multiplayer game view with 10-second timer and live scoring
+//  Main multiplayer game view with 20-second timer and live scoring
 //
 
 import SwiftUI
@@ -106,9 +106,9 @@ struct MultiplayerGameView: View {
                 .frame(width: 60, height: 60)
             
             Circle()
-                .trim(from: 0, to: CGFloat(viewModel.timeRemaining) / 10.0)
+                .trim(from: 0, to: CGFloat(viewModel.timeRemaining) / 20.0)
                 .stroke(
-                    viewModel.timeRemaining > 5 ? Color.green : Color.red,
+                    viewModel.timeRemaining > 10 ? Color.green : Color.red,
                     style: StrokeStyle(lineWidth: 4, lineCap: .round)
                 )
                 .frame(width: 60, height: 60)
