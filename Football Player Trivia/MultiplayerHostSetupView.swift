@@ -158,11 +158,12 @@ struct MultiplayerHostSetupView: View {
                 .foregroundColor(.orange)
                 .padding(.horizontal)
             
-            HStack(spacing: 20) {
-                VStack(alignment: .leading, spacing: 4) {
+            VStack(spacing: 12) {
+                HStack {
                     Text("From")
                         .font(.subheadline)
                         .foregroundColor(.white.opacity(0.7))
+                        .frame(width: 60, alignment: .leading)
                     
                     Picker("From", selection: $yearFrom) {
                         ForEach(2016...2025, id: \.self) { year in
@@ -176,12 +177,15 @@ struct MultiplayerHostSetupView: View {
                             yearTo = newValue
                         }
                     }
+                    
+                    Spacer()
                 }
                 
-                VStack(alignment: .leading, spacing: 4) {
+                HStack {
                     Text("To")
                         .font(.subheadline)
                         .foregroundColor(.white.opacity(0.7))
+                        .frame(width: 60, alignment: .leading)
                     
                     Picker("To", selection: $yearTo) {
                         ForEach(2016...2025, id: \.self) { year in
@@ -195,6 +199,8 @@ struct MultiplayerHostSetupView: View {
                             yearFrom = newValue
                         }
                     }
+                    
+                    Spacer()
                 }
             }
             .padding(.horizontal)
@@ -224,7 +230,7 @@ struct MultiplayerHostSetupView: View {
             }
             .padding(.horizontal)
             
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 80))], spacing: 10) {
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                 ForEach(settings.allPositions, id: \.self) { position in
                     positionButton(position)
                 }
@@ -254,32 +260,71 @@ struct MultiplayerHostSetupView: View {
     // MARK: - Teams Section
     
     private var teamsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Teams")
-                    .font(.headline)
-                    .foregroundColor(.orange)
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Teams")
+                .font(.headline)
+                .foregroundColor(.orange)
+                .padding(.horizontal)
+            
+            // AFC Section
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("AFC")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                    
+                    Spacer()
+                    
+                    Button(selectedTeams.intersection(Set(afcTeams)).count == afcTeams.count ? "Deselect All" : "Select All") {
+                        if selectedTeams.intersection(Set(afcTeams)).count == afcTeams.count {
+                            selectedTeams.subtract(afcTeams)
+                        } else {
+                            selectedTeams.formUnion(afcTeams)
+                        }
+                    }
+                    .font(.caption)
+                    .foregroundColor(.green)
+                }
+                .padding(.horizontal)
                 
-                Spacer()
-                
-                Button(selectedTeams.count == allTeams.count ? "Deselect All" : "Select All") {
-                    if selectedTeams.count == allTeams.count {
-                        selectedTeams.removeAll()
-                    } else {
-                        selectedTeams = Set(allTeams)
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                    ForEach(afcTeams, id: \.self) { team in
+                        teamButton(team)
                     }
                 }
-                .font(.caption)
-                .foregroundColor(.green)
+                .padding(.horizontal)
             }
-            .padding(.horizontal)
             
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 60))], spacing: 10) {
-                ForEach(allTeams, id: \.self) { team in
-                    teamButton(team)
+            // NFC Section
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("NFC")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                    
+                    Spacer()
+                    
+                    Button(selectedTeams.intersection(Set(nfcTeams)).count == nfcTeams.count ? "Deselect All" : "Select All") {
+                        if selectedTeams.intersection(Set(nfcTeams)).count == nfcTeams.count {
+                            selectedTeams.subtract(nfcTeams)
+                        } else {
+                            selectedTeams.formUnion(nfcTeams)
+                        }
+                    }
+                    .font(.caption)
+                    .foregroundColor(.green)
                 }
+                .padding(.horizontal)
+                
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                    ForEach(nfcTeams, id: \.self) { team in
+                        teamButton(team)
+                    }
+                }
+                .padding(.horizontal)
             }
-            .padding(.horizontal)
         }
     }
     
@@ -303,9 +348,16 @@ struct MultiplayerHostSetupView: View {
     
     // MARK: - Computed Properties
     
-    private var allTeams: [String] {
-        settings.afcEastTeams + settings.afcNorthTeams + settings.afcSouthTeams + settings.afcWestTeams +
+    private var afcTeams: [String] {
+        settings.afcEastTeams + settings.afcNorthTeams + settings.afcSouthTeams + settings.afcWestTeams
+    }
+    
+    private var nfcTeams: [String] {
         settings.nfcEastTeams + settings.nfcNorthTeams + settings.nfcSouthTeams + settings.nfcWestTeams
+    }
+    
+    private var allTeams: [String] {
+        afcTeams + nfcTeams
     }
     
     private var isValidSelection: Bool {
