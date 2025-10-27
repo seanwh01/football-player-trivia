@@ -1,0 +1,21 @@
+# AdMob Keys (DO NOT COMMIT)
+Football Player Trivia/AdMobKeys.plist
+
+# Xcode
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+DerivedData/
+*.moved-aside
+*.hmap
+*.ipa
+
+# macOS
+.DS_Store
+
+# Firebase
+.firebase/
+
+# Environment
+.env.local
