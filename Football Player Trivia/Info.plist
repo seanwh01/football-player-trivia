@@ -7,7 +7,7 @@
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>GADApplicationIdentifier</key>
-	<string>REPLACE_WITH_YOUR_ADMOB_APP_ID</string>
+	<string>ca-app-pub-5788734405171958~4143602636</string>
 	<key>NSUserTrackingUsageDescription</key>
 	<string>This identifier will be used to deliver personalized ads to you.</string>
 	<key>NSAppTransportSecurity</key>
