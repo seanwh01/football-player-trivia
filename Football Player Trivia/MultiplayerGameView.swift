@@ -11,6 +11,7 @@ struct MultiplayerGameView: View {
     @ObservedObject var multiplayerManager: MultiplayerManager
     @StateObject private var viewModel: MultiplayerGameViewModel
     @Environment(\.presentationMode) var presentationMode
+    @State private var adRefreshTrigger = 0
     
     init(multiplayerManager: MultiplayerManager) {
         self.multiplayerManager = multiplayerManager
@@ -39,8 +40,11 @@ struct MultiplayerGameView: View {
                 }
                 
                 // Banner Ad
-                BannerAdView()
-                    .frame(height: 50)
+                BannerAdView(
+                    adUnitID: AdMobManager.shared.getBannerAdUnitID(),
+                    refreshTrigger: $adRefreshTrigger
+                )
+                .frame(height: 50)
             }
         }
         .navigationBarBackButtonHidden(true)
