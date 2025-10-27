@@ -274,15 +274,22 @@ class MultiplayerGameViewModel: ObservableObject {
         }
         
         // Convert to leaderboard entries
-        let entries = scores.map { name, data in
-            LeaderboardEntry(
+        let unsortedEntries = scores.map { name, data -> LeaderboardEntry in
+            return LeaderboardEntry(
                 id: name,
                 playerName: name,
                 score: data.score,
                 averageResponseTime: data.answerCount > 0 ? data.totalTime / Double(data.answerCount) : 0
             )
         }
-        .sorted { $0.score > $1.score || ($0.score == $1.score && $0.averageResponseTime < $1.averageResponseTime) }
+        
+        // Sort by score (descending), then by average response time (ascending)
+        let entries = unsortedEntries.sorted { first, second in
+            if first.score != second.score {
+                return first.score > second.score
+            }
+            return first.averageResponseTime < second.averageResponseTime
+        }
         
         return entries
     }
