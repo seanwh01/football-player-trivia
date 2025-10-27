@@ -37,7 +37,7 @@ class MultiplayerGameViewModel: ObservableObject {
     private var leaderboardTimer: Timer?
     private var answerDisplayTimer: Timer?
     private var answerStartTime: Date?
-    private var playerAnswers: [String: PlayerAnswer] = []
+    private var playerAnswers: [String: PlayerAnswer] = [:]
     
     var totalQuestions: Int {
         multiplayerManager.gameSettings?.questionCount ?? 12
