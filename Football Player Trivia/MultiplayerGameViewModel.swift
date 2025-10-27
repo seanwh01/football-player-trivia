@@ -112,25 +112,69 @@ class MultiplayerGameViewModel: ObservableObject {
     
     private func generateQuestion(from settings: MultiplayerGameSettings) -> TriviaQuestion {
         // Randomly select from settings
-        let position = settings.positions.randomElement() ?? "QB"
+        let position = settings.positions.randomElement() ?? "Quarterback"
         let team = settings.teams.randomElement() ?? "KC"
         let year = Int.random(in: settings.yearFrom...settings.yearTo)
         
-        // For demo, generate sample player names
-        // In production, this would query your database
-        let firstNames = ["Patrick", "Josh", "Lamar", "Joe", "Travis", "Tyreek", "Stefon", "Justin"]
-        let lastNames = ["Mahomes", "Allen", "Jackson", "Burrow", "Kelce", "Hill", "Diggs", "Jefferson"]
+        // Query real players from database
+        let singlePlayerPositions = ["Quarterback", "Tight End", "Kicker"]
         
-        let firstName = firstNames.randomElement() ?? "John"
-        let lastName = lastNames.randomElement() ?? "Doe"
+        if singlePlayerPositions.contains(position) {
+            // Get top 1 player for single-player positions
+            let snapType = position == "Kicker" ? "special_teams" : "offense"
+            if let topPlayer = DatabaseManager.shared.getTopPlayerAtPosition(
+                position: position,
+                year: year,
+                team: team,
+                snapType: snapType
+            ) {
+                return TriviaQuestion(
+                    playerFirstName: topPlayer.firstName,
+                    playerLastName: topPlayer.lastName,
+                    position: position,
+                    team: team,
+                    year: year
+                )
+            }
+        } else {
+            // Get multiple players for multi-player positions
+            let limit = getPlayerLimit(for: position)
+            let snapType = ["Linebacker", "Defensive Back", "Defensive Linemen"].contains(position) ? "defense" : "offense"
+            
+            let players = DatabaseManager.shared.getTopPlayersAtPosition(
+                position: position,
+                year: year,
+                team: team,
+                limit: limit,
+                snapType: snapType
+            )
+            
+            if let randomPlayer = players.randomElement() {
+                return TriviaQuestion(
+                    playerFirstName: randomPlayer.firstName,
+                    playerLastName: randomPlayer.lastName,
+                    position: position,
+                    team: team,
+                    year: year
+                )
+            }
+        }
         
-        return TriviaQuestion(
-            playerFirstName: firstName,
-            playerLastName: lastName,
-            position: position,
-            team: team,
-            year: year
-        )
+        // Fallback if no player found - try another combination
+        return generateQuestion(from: settings)
+    }
+    
+    private func getPlayerLimit(for position: String) -> Int {
+        switch position {
+        case "Offensive Linemen":
+            return 5
+        case "Defensive Back":
+            return 4
+        case "Wide Receiver", "Linebacker", "Defensive Linemen":
+            return 3
+        default: // Running Back
+            return 2
+        }
     }
     
     // MARK: - Question Management (Player)
@@ -152,32 +196,96 @@ class MultiplayerGameViewModel: ObservableObject {
     
     // MARK: - Answer Submission
     
-    func submitAnswer() {
-        guard !hasAnswered, let question = currentQuestion else { return }
+    func submitAnswer(_ answer: String) {
+        guard let question = currentQuestion, !hasAnswered else { return }
         
-        stopQuestionTimer()
         hasAnswered = true
+        stopQuestionTimer()
         
         let responseTime = Date().timeIntervalSince(answerStartTime ?? Date())
         
-        // Check if answer is correct (simple string comparison for demo)
-        // In production, use your Firebase validation
-        let correctAnswer = question.fullPlayerName.lowercased()
-        let playerAnswer = userAnswer.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        let isCorrect = playerAnswer == correctAnswer || 
-                       playerAnswer == question.playerFirstName.lowercased() ||
-                       playerAnswer == question.playerLastName.lowercased()
+        // Use Firebase validation for answer checking
+        validateAnswerWithFirebase(answer: answer, question: question, responseTime: responseTime)
+    }
+    
+    private func validateAnswerWithFirebase(answer: String, question: TriviaQuestion, responseTime: TimeInterval) {
+        // Get all valid players for this position/team/year
+        let limit = getPlayerLimit(for: question.position)
+        let singlePlayerPositions = ["Quarterback", "Tight End", "Kicker"]
+        let snapType: String
         
-        lastAnswerCorrect = isCorrect
-        
-        if isCorrect {
-            // Award points based on speed (10 points max, decreases with time)
-            let points = max(1, 10 - Int(responseTime / 2))
-            currentPlayerScore += points
+        if question.position == "Kicker" {
+            snapType = "special_teams"
+        } else if ["Linebacker", "Defensive Back", "Defensive Linemen"].contains(question.position) {
+            snapType = "defense"
+        } else {
+            snapType = "offense"
         }
         
-        // Send to host
-        multiplayerManager.submitAnswer(userAnswer, isCorrect: isCorrect, responseTime: responseTime)
+        let players: [Player]
+        if singlePlayerPositions.contains(question.position) {
+            if let topPlayer = DatabaseManager.shared.getTopPlayerAtPosition(
+                position: question.position,
+                year: question.year,
+                team: question.team,
+                snapType: snapType
+            ) {
+                players = [topPlayer]
+            } else {
+                players = []
+            }
+        } else {
+            players = DatabaseManager.shared.getTopPlayersAtPosition(
+                position: question.position,
+                year: question.year,
+                team: question.team,
+                limit: limit,
+                snapType: snapType
+            )
+        }
+        
+        // Validate with Firebase
+        FirebaseService.shared.validateAnswerAndProvideInfo(
+            userAnswer: answer,
+            correctPlayers: players,
+            position: question.position,
+            team: question.team,
+            year: question.year
+        ) { [weak self] result in
+            guard let self = self else { return }
+            
+            switch result {
+            case .success(let validationResponse):
+                let isCorrect = validationResponse.isCorrect
+                self.lastAnswerCorrect = isCorrect
+                
+                if isCorrect {
+                    // Award points based on speed (10 points max, decreases with time)
+                    let points = max(1, 10 - Int(responseTime / 2))
+                    self.currentPlayerScore += points
+                }
+                
+                // Submit to multiplayer manager
+                self.multiplayerManager.submitAnswer(answer, isCorrect: isCorrect, responseTime: responseTime)
+                
+            case .failure(let error):
+                print("❌ Firebase validation error: \(error.localizedDescription)")
+                // Fallback to simple validation if Firebase fails
+                let correctAnswer = question.fullPlayerName.lowercased()
+                let playerAnswer = answer.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+                let isCorrect = playerAnswer == correctAnswer || 
+                               playerAnswer.contains(question.playerLastName.lowercased())
+                
+                self.lastAnswerCorrect = isCorrect
+                
+                if isCorrect {
+                    let points = max(1, 10 - Int(responseTime / 2))
+                    self.currentPlayerScore += points
+                }
+                
+                self.multiplayerManager.submitAnswer(answer, isCorrect: isCorrect, responseTime: responseTime)
+            }
+        }
     }
     
     private func receiveAnswer(from playerID: String, answer: String, isCorrect: Bool, responseTime: TimeInterval) {
