@@ -29,6 +29,7 @@ class MultiplayerGameViewModel: ObservableObject {
     @Published var leaderboardTimeRemaining: TimeInterval = 5.0
     @Published var answerDisplayTimeRemaining: TimeInterval = 5.0
     @Published var showLeaveConfirmation = false
+    @Published var hostDisconnected = false
     
     // MARK: - Private Properties
     
@@ -70,6 +71,10 @@ class MultiplayerGameViewModel: ObservableObject {
         
         multiplayerManager.onGameEnd = { [weak self] in
             self?.endGame()
+        }
+        
+        multiplayerManager.onHostDisconnected = { [weak self] in
+            self?.hostDisconnected = true
         }
     }
     

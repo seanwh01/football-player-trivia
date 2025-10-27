@@ -12,6 +12,7 @@ struct MultiplayerLobbyView: View {
     @Environment(\.presentationMode) var presentationMode
     
     @State private var navigateToGame = false
+    @State private var showHostDisconnectedAlert = false
     
     var body: some View {
         ZStack {
@@ -124,6 +125,13 @@ struct MultiplayerLobbyView: View {
         .onAppear {
             setupGameCallbacks()
         }
+        .alert("Host Disconnected", isPresented: $showHostDisconnectedAlert) {
+            Button("OK") {
+                presentationMode.wrappedValue.dismiss()
+            }
+        } message: {
+            Text("The host has left the lobby. Returning to menu.")
+        }
     }
     
     // MARK: - Helper Views
@@ -191,6 +199,10 @@ struct MultiplayerLobbyView: View {
     private func setupGameCallbacks() {
         multiplayerManager.onGameStart = {
             navigateToGame = true
+        }
+        
+        multiplayerManager.onHostDisconnected = {
+            showHostDisconnectedAlert = true
         }
     }
     

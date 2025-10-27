@@ -11,6 +11,8 @@ struct MultiplayerHostSetupView: View {
     @ObservedObject var settings: GameSettings
     @StateObject private var multiplayerManager = MultiplayerManager()
     @Environment(\.presentationMode) var presentationMode
+    @FocusState private var isNameFieldFocused: Bool
+    @Binding var isPresented: Bool
     
     @State private var hostName = ""
     @State private var selectedPositions: Set<String> = []
@@ -48,6 +50,7 @@ struct MultiplayerHostSetupView: View {
                             TextField("Enter your name", text: $hostName)
                                 .textFieldStyle(RoundedBorderTextFieldStyle())
                                 .autocapitalization(.words)
+                                .focused($isNameFieldFocused)
                         }
                         .padding(.horizontal)
                         
@@ -140,6 +143,9 @@ struct MultiplayerHostSetupView: View {
             selectedTeams = settings.selectedTeams
             yearFrom = settings.yearFrom
             yearTo = settings.yearTo
+            
+            // Auto-focus name field
+            isNameFieldFocused = true
         }
     }
     
@@ -334,5 +340,5 @@ struct MultiplayerHostSetupView: View {
 }
 
 #Preview {
-    MultiplayerHostSetupView(settings: GameSettings())
+    MultiplayerHostSetupView(settings: GameSettings(), isPresented: .constant(true))
 }

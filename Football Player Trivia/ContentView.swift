@@ -251,10 +251,10 @@ struct ContentView: View {
             Text("Choose whether to host a game or join a nearby game")
         }
         .sheet(isPresented: $showMultiplayerHost) {
-            MultiplayerHostSetupView(settings: gameSettings)
+            MultiplayerHostSetupView(settings: gameSettings, isPresented: $showMultiplayerHost)
         }
         .sheet(isPresented: $showMultiplayerJoin) {
-            MultiplayerJoinView()
+            MultiplayerJoinView(isPresented: $showMultiplayerJoin)
         }
     }
     

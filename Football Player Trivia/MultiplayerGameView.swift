@@ -74,6 +74,13 @@ struct MultiplayerGameView: View {
                 viewModel.loadNextQuestion()
             }
         }
+        .alert("Host Disconnected", isPresented: $viewModel.hostDisconnected) {
+            Button("OK") {
+                leaveGame()
+            }
+        } message: {
+            Text("The host has left the game. Returning to menu.")
+        }
     }
     
     // MARK: - Header

@@ -31,6 +31,7 @@ class MultiplayerManager: NSObject, ObservableObject {
     
     var playerName: String = ""
     var gameSettings: MultiplayerGameSettings?
+    private var hostPeerID: MCPeerID?
     
     // MARK: - Message Handlers
     
@@ -40,6 +41,7 @@ class MultiplayerManager: NSObject, ObservableObject {
     var onNextQuestion: (() -> Void)?
     var onGameEnd: (() -> Void)?
     var onLeaderboardUpdate: (([LeaderboardEntry]) -> Void)?
+    var onHostDisconnected: (() -> Void)?
     
     // MARK: - Initialization
     
@@ -136,6 +138,9 @@ class MultiplayerManager: NSObject, ObservableObject {
     
     func joinHost(_ host: MCPeerID) {
         guard let browser = browser else { return }
+        
+        // Track the host peer ID
+        hostPeerID = host
         
         // Send invitation with player name
         let context = playerName.data(using: .utf8)
@@ -256,6 +261,12 @@ extension MultiplayerManager: MCSessionDelegate {
                 print("❌ Disconnected from: \(peerID.displayName)")
                 connectedPeers.removeAll { $0 == peerID }
                 playerNames.removeValue(forKey: peerID)
+                
+                // Check if the host disconnected
+                if !isHost && peerID == hostPeerID {
+                    print("⚠️ Host disconnected - ending game")
+                    onHostDisconnected?()
+                }
                 
                 if connectedPeers.isEmpty && !isHost {
                     connectionState = .disconnected

@@ -11,6 +11,8 @@ import MultipeerConnectivity
 struct MultiplayerJoinView: View {
     @StateObject private var multiplayerManager = MultiplayerManager()
     @Environment(\.presentationMode) var presentationMode
+    @FocusState private var isNameFieldFocused: Bool
+    @Binding var isPresented: Bool
     
     @State private var playerName = ""
     @State private var isBrowsing = false
@@ -40,6 +42,7 @@ struct MultiplayerJoinView: View {
                             TextField("Enter your name", text: $playerName)
                                 .textFieldStyle(RoundedBorderTextFieldStyle())
                                 .autocapitalization(.words)
+                                .focused($isNameFieldFocused)
                         }
                         .padding(.horizontal, 30)
                         .padding(.top, 20)
@@ -141,6 +144,10 @@ struct MultiplayerJoinView: View {
             if state == .connected {
                 navigateToLobby = true
             }
+        }
+        .onAppear {
+            // Auto-focus name field
+            isNameFieldFocused = true
         }
     }
     
