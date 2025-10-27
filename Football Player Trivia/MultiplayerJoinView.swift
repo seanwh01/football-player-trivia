@@ -126,7 +126,7 @@ struct MultiplayerJoinView: View {
                 
                 // Navigation to lobby
                 NavigationLink(
-                    destination: MultiplayerLobbyView(multiplayerManager: multiplayerManager),
+                    destination: MultiplayerLobbyView(multiplayerManager: multiplayerManager, isPresented: $isPresented),
                     isActive: $navigateToLobby
                 ) {
                     EmptyView()

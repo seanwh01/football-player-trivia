@@ -11,10 +11,12 @@ struct MultiplayerGameView: View {
     @ObservedObject var multiplayerManager: MultiplayerManager
     @StateObject private var viewModel: MultiplayerGameViewModel
     @Environment(\.presentationMode) var presentationMode
+    @Binding var isPresented: Bool
     @State private var adRefreshTrigger = 0
     
-    init(multiplayerManager: MultiplayerManager) {
+    init(multiplayerManager: MultiplayerManager, isPresented: Binding<Bool>) {
         self.multiplayerManager = multiplayerManager
+        self._isPresented = isPresented
         _viewModel = StateObject(wrappedValue: MultiplayerGameViewModel(multiplayerManager: multiplayerManager))
     }
     
@@ -167,7 +169,7 @@ struct MultiplayerGameView: View {
             Image("PigskinGeniusLogo")
                 .resizable()
                 .scaledToFit()
-                .frame(height: 100)
+                .frame(height: 150)
                 .padding(.top, 10)
             
             Spacer()
@@ -357,7 +359,7 @@ struct MultiplayerGameView: View {
             Spacer()
             
             Button(action: {
-                presentationMode.wrappedValue.dismiss()
+                leaveGame()
             }) {
                 Text("Back to Menu")
                     .font(.system(size: 20, weight: .bold))
@@ -388,6 +390,7 @@ struct MultiplayerGameView: View {
         } else {
             multiplayerManager.stopBrowsing()
         }
-        presentationMode.wrappedValue.dismiss()
+        // Dismiss entire navigation stack back to ContentView
+        isPresented = false
     }
 }

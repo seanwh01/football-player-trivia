@@ -74,7 +74,11 @@ class MultiplayerGameViewModel: ObservableObject {
         }
         
         multiplayerManager.onHostDisconnected = { [weak self] in
-            self?.hostDisconnected = true
+            guard let self = self else { return }
+            // Don't show alert if game is already finished
+            if !self.showFinalResults && !self.isFinalLeaderboard {
+                self.hostDisconnected = true
+            }
         }
     }
     

@@ -10,6 +10,7 @@ import SwiftUI
 struct MultiplayerLobbyView: View {
     @ObservedObject var multiplayerManager: MultiplayerManager
     @Environment(\.presentationMode) var presentationMode
+    @Binding var isPresented: Bool
     
     @State private var navigateToGame = false
     @State private var showHostDisconnectedAlert = false
@@ -101,7 +102,7 @@ struct MultiplayerLobbyView: View {
             
             // Navigation to game
             NavigationLink(
-                destination: MultiplayerGameView(multiplayerManager: multiplayerManager),
+                destination: MultiplayerGameView(multiplayerManager: multiplayerManager, isPresented: $isPresented),
                 isActive: $navigateToGame
             ) {
                 EmptyView()
@@ -231,6 +232,6 @@ struct MultiplayerLobbyView: View {
     )
     
     return NavigationView {
-        MultiplayerLobbyView(multiplayerManager: manager)
+        MultiplayerLobbyView(multiplayerManager: manager, isPresented: .constant(true))
     }
 }
