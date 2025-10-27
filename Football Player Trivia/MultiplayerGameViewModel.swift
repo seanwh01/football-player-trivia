@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import Combine
 import MultipeerConnectivity
 
 @MainActor
@@ -34,7 +35,7 @@ class MultiplayerGameViewModel: ObservableObject {
     private var questionTimer: Timer?
     private var leaderboardTimer: Timer?
     private var answerStartTime: Date?
-    private var playerAnswers: [MCPeerID: PlayerAnswer] = [:]
+    private var playerAnswers: [String: PlayerAnswer] = [:]
     
     var totalQuestions: Int {
         multiplayerManager.gameSettings?.questionCount ?? 12
@@ -168,7 +169,7 @@ class MultiplayerGameViewModel: ObservableObject {
         multiplayerManager.submitAnswer(userAnswer, isCorrect: isCorrect, responseTime: responseTime)
     }
     
-    private func receiveAnswer(from playerID: MCPeerID, answer: String, isCorrect: Bool, responseTime: TimeInterval) {
+    private func receiveAnswer(from playerID: String, answer: String, isCorrect: Bool, responseTime: TimeInterval) {
         guard multiplayerManager.isHost else { return }
         
         let points = isCorrect ? max(1, 10 - Int(responseTime)) : 0
@@ -257,8 +258,10 @@ class MultiplayerGameViewModel: ObservableObject {
         scores[hostName] = (currentPlayerScore, 0, 0)
         
         // Add peer scores (would need to track across all questions in production)
-        for (peerID, answer) in playerAnswers {
-            if let playerName = multiplayerManager.playerNames[peerID] {
+        for (playerID, answer) in playerAnswers {
+            // playerID is already the displayName string
+            let playerName = playerID
+            if true {
                 if var existing = scores[playerName] {
                     existing.score += answer.points
                     existing.totalTime += answer.responseTime

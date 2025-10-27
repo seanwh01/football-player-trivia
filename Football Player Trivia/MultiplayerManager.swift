@@ -35,7 +35,7 @@ class MultiplayerManager: NSObject, ObservableObject {
     // MARK: - Message Handlers
     
     var onQuestionReceived: ((TriviaQuestion) -> Void)?
-    var onAnswerReceived: ((MCPeerID, String, Bool, TimeInterval) -> Void)?
+    var onAnswerReceived: ((String, String, Bool, TimeInterval) -> Void)?
     var onGameStart: (() -> Void)?
     var onNextQuestion: (() -> Void)?
     var onGameEnd: (() -> Void)?
@@ -155,11 +155,11 @@ class MultiplayerManager: NSObject, ObservableObject {
     // MARK: - Player Methods
     
     func submitAnswer(_ answer: String, isCorrect: Bool, responseTime: TimeInterval) {
-        let message = GameMessage.answer(playerID: peerID, answer: answer, isCorrect: isCorrect, responseTime: responseTime)
+        let message = GameMessage.answer(playerID: peerID.displayName, answer: answer, isCorrect: isCorrect, responseTime: responseTime)
         
         if isHost {
             // Host processes own answer
-            onAnswerReceived?(peerID, answer, isCorrect, responseTime)
+            onAnswerReceived?(peerID.displayName, answer, isCorrect, responseTime)
         } else {
             // Send to host
             sendToHost(message)
@@ -353,7 +353,7 @@ struct MultiplayerGameSettings: Codable {
 enum GameMessage: Codable {
     case gameStart(settings: MultiplayerGameSettings)
     case question(TriviaQuestion)
-    case answer(playerID: MCPeerID, answer: String, isCorrect: Bool, responseTime: TimeInterval)
+    case answer(playerID: String, answer: String, isCorrect: Bool, responseTime: TimeInterval)
     case nextQuestion
     case leaderboard([LeaderboardEntry])
     case gameEnd
@@ -368,16 +368,3 @@ struct LeaderboardEntry: Codable, Identifiable {
     var rank: Int = 0
 }
 
-// Make MCPeerID Codable
-extension MCPeerID: @retroactive Codable {
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.singleValueContainer()
-        try container.encode(displayName)
-    }
-    
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        let displayName = try container.decode(String.self)
-        self.init(displayName: displayName)
-    }
-}
