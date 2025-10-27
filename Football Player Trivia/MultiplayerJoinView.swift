@@ -204,5 +204,5 @@ struct MultiplayerJoinView: View {
 }
 
 #Preview {
-    MultiplayerJoinView()
+    MultiplayerJoinView(isPresented: .constant(true))
 }
