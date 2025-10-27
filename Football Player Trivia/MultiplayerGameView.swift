@@ -167,7 +167,7 @@ struct MultiplayerGameView: View {
             Image("PigskinGeniusLogo")
                 .resizable()
                 .scaledToFit()
-                .frame(height: 50)
+                .frame(height: 100)
                 .padding(.top, 10)
             
             Spacer()
@@ -261,7 +261,7 @@ struct MultiplayerGameView: View {
             Image("PigskinGeniusLogo")
                 .resizable()
                 .scaledToFit()
-                .frame(height: 60)
+                .frame(height: 120)
                 .padding(.top, 20)
             
             Text(viewModel.isFinalLeaderboard ? "Final Scores" : "Leaderboard")

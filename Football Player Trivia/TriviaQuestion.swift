@@ -36,23 +36,23 @@ struct TriviaQuestion: Codable, Identifiable {
         let positionDescription: String
         
         switch position {
-        case "QB":
+        case "QB", "Quarterback":
             positionDescription = "the top quarterback"
-        case "RB":
+        case "RB", "Running Back":
             positionDescription = "one of the top two running backs"
-        case "WR":
+        case "WR", "Wide Receiver":
             positionDescription = "one of the top three wide receivers"
-        case "TE":
+        case "TE", "Tight End":
             positionDescription = "the top Tight End"
-        case "OL":
+        case "OL", "Offensive Linemen":
             positionDescription = "one of the top five offensive linemen"
-        case "DL":
+        case "DL", "Defensive Linemen":
             positionDescription = "one of the top three defensive linemen"
-        case "LB":
+        case "LB", "Linebacker":
             positionDescription = "one of the top three linebackers"
-        case "DB":
+        case "DB", "Defensive Back":
             positionDescription = "one of the top four defensive backs"
-        case "K":
+        case "K", "Kicker":
             positionDescription = "the kicker"
         default:
             positionDescription = "the \(position)"
