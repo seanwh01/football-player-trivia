@@ -90,9 +90,15 @@ struct MultiplayerGameView: View {
     private var header: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Question \(viewModel.currentQuestionNumber)/\(viewModel.totalQuestions)")
-                    .font(.headline)
-                    .foregroundColor(.white)
+                if viewModel.currentQuestionNumber > 0 || viewModel.currentQuestion != nil {
+                    Text("Question \(viewModel.currentQuestionNumber)/\(viewModel.totalQuestions)")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                } else {
+                    Text("Starting...")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                }
                 
                 Text("Score: \(viewModel.currentPlayerScore)")
                     .font(.subheadline)

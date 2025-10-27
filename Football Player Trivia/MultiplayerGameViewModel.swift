@@ -244,6 +244,18 @@ class MultiplayerGameViewModel: ObservableObject {
             )
         }
         
+        // Set a flag to track if validation completed
+        var validationCompleted = false
+        
+        // Timeout after 3 seconds - submit with fallback validation
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
+            guard let self = self, !validationCompleted else { return }
+            validationCompleted = true
+            
+            print("⚠️ Firebase validation timeout - using fallback")
+            self.handleFallbackValidation(answer: answer, question: question, responseTime: responseTime)
+        }
+        
         // Validate with Firebase
         FirebaseService.shared.validateAnswerAndProvideInfo(
             userAnswer: answer,
@@ -253,6 +265,8 @@ class MultiplayerGameViewModel: ObservableObject {
             team: question.team
         ) { [weak self] result in
             guard let self = self else { return }
+            guard !validationCompleted else { return }
+            validationCompleted = true
             
             switch result {
             case .success(let validationResponse):
@@ -270,22 +284,26 @@ class MultiplayerGameViewModel: ObservableObject {
                 
             case .failure(let error):
                 print("❌ Firebase validation error: \(error.localizedDescription)")
-                // Fallback to simple validation if Firebase fails
-                let correctAnswer = question.fullPlayerName.lowercased()
-                let playerAnswer = answer.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-                let isCorrect = playerAnswer == correctAnswer || 
-                               playerAnswer.contains(question.playerLastName.lowercased())
-                
-                self.lastAnswerCorrect = isCorrect
-                
-                if isCorrect {
-                    let points = max(1, 10 - Int(responseTime / 2))
-                    self.currentPlayerScore += points
-                }
-                
-                self.multiplayerManager.submitAnswer(answer, isCorrect: isCorrect, responseTime: responseTime)
+                self.handleFallbackValidation(answer: answer, question: question, responseTime: responseTime)
             }
         }
+    }
+    
+    private func handleFallbackValidation(answer: String, question: TriviaQuestion, responseTime: TimeInterval) {
+        // Fallback to simple validation if Firebase fails or times out
+        let correctAnswer = question.fullPlayerName.lowercased()
+        let playerAnswer = answer.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        let isCorrect = playerAnswer == correctAnswer || 
+                       playerAnswer.contains(question.playerLastName.lowercased())
+        
+        self.lastAnswerCorrect = isCorrect
+        
+        if isCorrect {
+            let points = max(1, 10 - Int(responseTime / 2))
+            self.currentPlayerScore += points
+        }
+        
+        self.multiplayerManager.submitAnswer(answer, isCorrect: isCorrect, responseTime: responseTime)
     }
     
     private func receiveAnswer(from playerID: String, answer: String, isCorrect: Bool, responseTime: TimeInterval) {
