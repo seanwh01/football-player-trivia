@@ -249,8 +249,8 @@ class MultiplayerGameViewModel: ObservableObject {
             userAnswer: answer,
             correctPlayers: players,
             position: question.position,
-            team: question.team,
-            year: question.year
+            year: question.year,
+            team: question.team
         ) { [weak self] result in
             guard let self = self else { return }
             
