@@ -33,6 +33,31 @@ struct TriviaQuestion: Codable, Identifiable {
     }
     
     var questionText: String {
-        "Which \(position) played for the \(team) in \(year)?"
+        let positionDescription: String
+        
+        switch position {
+        case "QB":
+            positionDescription = "the top quarterback"
+        case "RB":
+            positionDescription = "one of the top two running backs"
+        case "WR":
+            positionDescription = "one of the top three wide receivers"
+        case "TE":
+            positionDescription = "the top Tight End"
+        case "OL":
+            positionDescription = "one of the top five offensive linemen"
+        case "DL":
+            positionDescription = "one of the top three defensive linemen"
+        case "LB":
+            positionDescription = "one of the top three linebackers"
+        case "DB":
+            positionDescription = "one of the top four defensive backs"
+        case "K":
+            positionDescription = "the kicker"
+        default:
+            positionDescription = "the \(position)"
+        }
+        
+        return "Name \(positionDescription) for \(team) in \(year)."
     }
 }
