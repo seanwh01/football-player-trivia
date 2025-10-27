@@ -326,10 +326,8 @@ class MultiplayerGameViewModel: ObservableObject {
         leaderboardTimer = nil
         showLeaderboard = false
         
-        if multiplayerManager.isHost {
-            multiplayerManager.broadcastNextQuestion()
-            loadNextQuestion()
-        }
+        // Host will manually spin for the next question
+        // No auto-load here - return to spin screen
     }
     
     // MARK: - Game End

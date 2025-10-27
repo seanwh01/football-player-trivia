@@ -72,9 +72,6 @@ struct MultiplayerGameView: View {
         }
         .onAppear {
             viewModel.setupCallbacks()
-            if multiplayerManager.isHost {
-                viewModel.loadNextQuestion()
-            }
         }
     }
     
