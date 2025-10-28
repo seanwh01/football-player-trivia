@@ -259,34 +259,36 @@ struct MultiplayerGameView: View {
                             .fontWeight(.bold)
                             .foregroundColor(.white)
                         
-                        // Show all correct answers if there are multiple
-                        if viewModel.correctPlayers.count > 1 {
-                            VStack(spacing: 8) {
-                                Text("The correct answers include:")
-                                    .font(.headline)
-                                    .foregroundColor(.white)
-                                    .padding(.top, 8)
-                                
-                                ForEach(viewModel.correctPlayers, id: \.playerId) { player in
-                                    Text("\(player.firstName) \(player.lastName)")
-                                        .font(.system(size: 22, weight: .bold))
+                        // Always show correct answers (whether user was right or wrong)
+                        if !viewModel.correctPlayers.isEmpty {
+                            if viewModel.correctPlayers.count > 1 {
+                                VStack(spacing: 8) {
+                                    Text("The correct answers include:")
+                                        .font(.headline)
+                                        .foregroundColor(.white)
+                                        .padding(.top, 8)
+                                    
+                                    ForEach(viewModel.correctPlayers, id: \.playerId) { player in
+                                        Text("\(player.firstName) \(player.lastName)")
+                                            .font(.system(size: 22, weight: .bold))
+                                            .foregroundColor(.orange)
+                                    }
+                                }
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 20)
+                            } else if let firstPlayer = viewModel.correctPlayers.first {
+                                VStack(spacing: 4) {
+                                    Text("Answer:")
+                                        .font(.headline)
+                                        .foregroundColor(.white)
+                                    
+                                    Text("\(firstPlayer.firstName) \(firstPlayer.lastName)")
+                                        .font(.system(size: 28, weight: .bold))
                                         .foregroundColor(.orange)
                                 }
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 20)
                             }
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 20)
-                        } else if let firstPlayer = viewModel.correctPlayers.first {
-                            VStack(spacing: 4) {
-                                Text("Answer:")
-                                    .font(.headline)
-                                    .foregroundColor(.white)
-                                
-                                Text("\(firstPlayer.firstName) \(firstPlayer.lastName)")
-                                    .font(.system(size: 28, weight: .bold))
-                                    .foregroundColor(.orange)
-                            }
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 20)
                         }
                         
                         if !multiplayerManager.isHost {

@@ -484,10 +484,10 @@ class MultiplayerGameViewModel: ObservableObject {
         isFinalLeaderboard = currentQuestionNumber >= totalQuestions
         
         // Update local player's score from leaderboard (ensures sync with host's calculation)
-        if !multiplayerManager.isHost {
-            if let myEntry = entries.first(where: { $0.playerName == multiplayerManager.playerName }) {
-                currentPlayerScore = myEntry.score
-            }
+        // Do this IMMEDIATELY for all players (including host) to ensure header shows correct score
+        if let myEntry = entries.first(where: { $0.playerName == multiplayerManager.playerName }) {
+            print("📊 Updating score from leaderboard: \(currentPlayerScore) → \(myEntry.score)")
+            currentPlayerScore = myEntry.score
         }
         
         // Players: show answer for 5 seconds first, then leaderboard
