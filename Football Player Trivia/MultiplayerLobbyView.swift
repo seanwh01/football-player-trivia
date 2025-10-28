@@ -165,8 +165,11 @@ struct MultiplayerLobbyView: View {
                 .font(.headline)
                 .foregroundColor(.white)
             
-            // Show (Host) only if this device is the host AND it's their name
-            if name == multiplayerManager.playerName && multiplayerManager.isHost {
+            // Show (Host) label
+            // If this device is host: show for own name
+            // If this device is player: show for host's name
+            if (multiplayerManager.isHost && name == multiplayerManager.playerName) ||
+               (!multiplayerManager.isHost && name == multiplayerManager.hostName) {
                 Text("(Host)")
                     .font(.caption)
                     .foregroundColor(.orange)

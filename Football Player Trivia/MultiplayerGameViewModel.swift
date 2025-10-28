@@ -103,6 +103,7 @@ class MultiplayerGameViewModel: ObservableObject {
         currentQuestion = question
         
         // Broadcast to all players
+        print("📤 Host broadcasting question \(currentQuestionNumber): \(question.questionText)")
         multiplayerManager.broadcastQuestion(question)
         
         // Reset for new question
@@ -182,6 +183,7 @@ class MultiplayerGameViewModel: ObservableObject {
     // MARK: - Question Management (Player)
     
     private func receiveQuestion(_ question: TriviaQuestion) {
+        print("📩 Player received question \(currentQuestionNumber + 1): \(question.questionText)")
         currentQuestion = question
         currentQuestionNumber += 1
         resetForNewQuestion()

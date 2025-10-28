@@ -31,7 +31,12 @@ class MultiplayerManager: NSObject, ObservableObject {
     
     var playerName: String = ""
     var gameSettings: MultiplayerGameSettings?
-    private var hostPeerID: MCPeerID?
+    var hostPeerID: MCPeerID?
+    
+    var hostName: String? {
+        guard let hostID = hostPeerID else { return nil }
+        return playerNames[hostID]
+    }
     
     // MARK: - Message Handlers
     

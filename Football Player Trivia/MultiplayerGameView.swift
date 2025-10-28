@@ -73,7 +73,10 @@ struct MultiplayerGameView: View {
         .onAppear {
             viewModel.setupCallbacks()
             if multiplayerManager.isHost {
-                viewModel.loadNextQuestion()
+                // Small delay to ensure all players have set up callbacks
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    viewModel.loadNextQuestion()
+                }
             }
         }
         .alert("Host Disconnected", isPresented: $viewModel.hostDisconnected) {
