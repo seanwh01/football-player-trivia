@@ -17,7 +17,9 @@ class MultiplayerGameViewModel: ObservableObject {
     @Published var currentQuestion: TriviaQuestion?
     @Published var userAnswer = ""
     @Published var hasAnswered = false
+    @Published var isValidating = false
     @Published var lastAnswerCorrect = false
+    @Published var correctPlayers: [Player] = []
     @Published var timeRemaining: TimeInterval = 20.0
     @Published var isTimerRunning = false
     @Published var currentQuestionNumber = 0
@@ -197,9 +199,9 @@ class MultiplayerGameViewModel: ObservableObject {
     // MARK: - Answer Submission
     
     func submitAnswer(_ answer: String) {
-        guard let question = currentQuestion, !hasAnswered else { return }
+        guard let question = currentQuestion, !hasAnswered, !isValidating else { return }
         
-        hasAnswered = true
+        isValidating = true
         stopQuestionTimer()
         
         let responseTime = Date().timeIntervalSince(answerStartTime ?? Date())
@@ -244,6 +246,9 @@ class MultiplayerGameViewModel: ObservableObject {
             )
         }
         
+        // Store correct players for display
+        self.correctPlayers = players
+        
         // Set a flag to track if validation completed
         var validationCompleted = false
         
@@ -272,6 +277,8 @@ class MultiplayerGameViewModel: ObservableObject {
             case .success(let validationResponse):
                 let isCorrect = validationResponse.isCorrect
                 self.lastAnswerCorrect = isCorrect
+                self.hasAnswered = true
+                self.isValidating = false
                 
                 if isCorrect {
                     // Award points based on speed (10 points max, decreases with time)
@@ -313,6 +320,8 @@ class MultiplayerGameViewModel: ObservableObject {
         }
         
         self.lastAnswerCorrect = isCorrect
+        self.hasAnswered = true
+        self.isValidating = false
         
         if isCorrect {
             let points = max(1, 10 - Int(responseTime / 2))

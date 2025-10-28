@@ -209,8 +209,21 @@ struct MultiplayerGameView: View {
                     }
                 }
                 
-                // Answer Input
-                if !viewModel.hasAnswered {
+                // Answer Input or Result
+                if viewModel.isValidating {
+                    // Show validating state
+                    VStack(spacing: 16) {
+                        ProgressView()
+                            .scaleEffect(1.5)
+                            .tint(.orange)
+                        
+                        Text("Validating answer...")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .padding(.top, 8)
+                    }
+                    .padding(.vertical, 40)
+                } else if !viewModel.hasAnswered {
                     VStack(spacing: 16) {
                         TextField("Enter player name", text: $viewModel.userAnswer)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
@@ -243,11 +256,35 @@ struct MultiplayerGameView: View {
                             .fontWeight(.bold)
                             .foregroundColor(.white)
                         
-                        Text("Answer: \(question.fullPlayerName)")
-                            .font(.system(size: 28, weight: .bold))
-                            .foregroundColor(.orange)
+                        // Show all correct answers if there are multiple
+                        if viewModel.correctPlayers.count > 1 {
+                            VStack(spacing: 8) {
+                                Text("The correct answers include:")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                    .padding(.top, 8)
+                                
+                                ForEach(viewModel.correctPlayers, id: \.id) { player in
+                                    Text("\(player.firstName) \(player.lastName)")
+                                        .font(.system(size: 22, weight: .bold))
+                                        .foregroundColor(.orange)
+                                }
+                            }
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 20)
+                        } else if let firstPlayer = viewModel.correctPlayers.first {
+                            VStack(spacing: 4) {
+                                Text("Answer:")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                
+                                Text("\(firstPlayer.firstName) \(firstPlayer.lastName)")
+                                    .font(.system(size: 28, weight: .bold))
+                                    .foregroundColor(.orange)
+                            }
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 20)
+                        }
                         
                         if !multiplayerManager.isHost {
                             Text("Waiting for all players...")
