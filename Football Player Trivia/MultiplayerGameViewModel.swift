@@ -20,6 +20,7 @@ class MultiplayerGameViewModel: ObservableObject {
     @Published var isValidating = false
     @Published var lastAnswerCorrect = false
     @Published var correctPlayers: [Player] = []
+    @Published var currentQuestionPoints = 0
     @Published var timeRemaining: TimeInterval = 20.0
     @Published var isTimerRunning = false
     @Published var currentQuestionNumber = 0
@@ -292,7 +293,10 @@ class MultiplayerGameViewModel: ObservableObject {
                 if isCorrect {
                     // Award points based on speed (10 points max, decreases with time)
                     let points = max(1, 10 - Int(responseTime / 2))
+                    self.currentQuestionPoints = points
                     self.currentPlayerScore += points
+                } else {
+                    self.currentQuestionPoints = 0
                 }
                 
                 // Submit to multiplayer manager
@@ -334,7 +338,10 @@ class MultiplayerGameViewModel: ObservableObject {
         
         if isCorrect {
             let points = max(1, 10 - Int(responseTime / 2))
+            self.currentQuestionPoints = points
             self.currentPlayerScore += points
+        } else {
+            self.currentQuestionPoints = 0
         }
         
         self.multiplayerManager.submitAnswer(answer, isCorrect: isCorrect, responseTime: responseTime)
@@ -392,6 +399,7 @@ class MultiplayerGameViewModel: ObservableObject {
         if !hasAnswered {
             hasAnswered = true
             lastAnswerCorrect = false
+            currentQuestionPoints = 0
             
             // Populate correctPlayers so they can see what the answer was
             if let question = currentQuestion, correctPlayers.isEmpty {
@@ -611,6 +619,7 @@ class MultiplayerGameViewModel: ObservableObject {
         hasAnswered = false
         isValidating = false
         lastAnswerCorrect = false
+        currentQuestionPoints = 0
         // DON'T clear correctPlayers here - it needs to display during answer screen
         timeRemaining = 20.0
         playerAnswers.removeAll()

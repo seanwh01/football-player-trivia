@@ -291,6 +291,12 @@ struct MultiplayerGameView: View {
                             }
                         }
                         
+                        // Points scored on this question
+                        Text("Points Scored: \(viewModel.currentQuestionPoints)")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(viewModel.currentQuestionPoints > 0 ? .green : .red)
+                            .padding(.top, 16)
+                        
                         if !multiplayerManager.isHost {
                             Text("Waiting for all players...")
                                 .font(.caption)
