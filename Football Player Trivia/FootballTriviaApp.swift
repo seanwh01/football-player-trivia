@@ -18,10 +18,13 @@ struct FootballTriviaApp: App {
         FirebaseApp.configure()
         print("✅ Firebase initialized successfully")
         
-        // Initialize Google AdMob
-        MobileAds.shared.start { status in
-            print("✅ AdMob initialized successfully")
-            print("   Adapter statuses: \(status.adapterStatusesByClassName)")
+        // Delay AdMob initialization to avoid blocking app launch
+        // AdMob will start when first ad is loaded (lazy initialization)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            MobileAds.shared.start { status in
+                print("✅ AdMob initialized successfully (delayed)")
+                print("   Adapter statuses: \(status.adapterStatusesByClassName)")
+            }
         }
         
         // Warm up database on background thread

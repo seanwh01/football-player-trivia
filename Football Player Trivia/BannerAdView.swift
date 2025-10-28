@@ -17,7 +17,12 @@ struct BannerAdView: UIViewRepresentable {
         banner.adUnitID = adUnitID
         banner.rootViewController = getRootViewController()
         banner.delegate = context.coordinator
-        banner.load(Request())
+        
+        // Load ad asynchronously to avoid blocking UI
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            banner.load(Request())
+        }
+        
         return banner
     }
     
