@@ -247,13 +247,13 @@ class MultiplayerGameViewModel: ObservableObject {
         // Set a flag to track if validation completed
         var validationCompleted = false
         
-        // Timeout after 3 seconds - submit with fallback validation
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
+        // Timeout after 10 seconds - submit with fallback validation
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) { [weak self] in
             guard let self = self, !validationCompleted else { return }
             validationCompleted = true
             
             print("⚠️ Firebase validation timeout - using fallback")
-            self.handleFallbackValidation(answer: answer, question: question, responseTime: responseTime)
+            self.handleFallbackValidation(answer: answer, question: question, players: players, responseTime: responseTime)
         }
         
         // Validate with Firebase
@@ -284,17 +284,33 @@ class MultiplayerGameViewModel: ObservableObject {
                 
             case .failure(let error):
                 print("❌ Firebase validation error: \(error.localizedDescription)")
-                self.handleFallbackValidation(answer: answer, question: question, responseTime: responseTime)
+                self.handleFallbackValidation(answer: answer, question: question, players: players, responseTime: responseTime)
             }
         }
     }
     
-    private func handleFallbackValidation(answer: String, question: TriviaQuestion, responseTime: TimeInterval) {
-        // Fallback to simple validation if Firebase fails or times out
-        let correctAnswer = question.fullPlayerName.lowercased()
+    private func handleFallbackValidation(answer: String, question: TriviaQuestion, players: [Player], responseTime: TimeInterval) {
+        // Fallback validation - check against all valid players (not just the one shown)
         let playerAnswer = answer.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        let isCorrect = playerAnswer == correctAnswer || 
-                       playerAnswer.contains(question.playerLastName.lowercased())
+        
+        var isCorrect = false
+        
+        // Check if answer matches any of the valid players for this position/team/year
+        for player in players {
+            let fullName = "\(player.firstName) \(player.lastName)".lowercased()
+            let lastName = player.lastName.lowercased()
+            let firstName = player.firstName.lowercased()
+            
+            // Check for various matching patterns
+            if playerAnswer == fullName ||  // Exact full name match
+               playerAnswer == lastName ||  // Last name only
+               playerAnswer == firstName || // First name only
+               fullName.contains(playerAnswer) ||  // Answer is part of full name
+               playerAnswer.contains(lastName) {   // Answer contains last name
+                isCorrect = true
+                break
+            }
+        }
         
         self.lastAnswerCorrect = isCorrect
         

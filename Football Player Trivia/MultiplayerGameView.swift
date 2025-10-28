@@ -188,6 +188,8 @@ struct MultiplayerGameView: View {
                         .fontWeight(.bold)
                         .foregroundColor(.white)
                         .multilineTextAlignment(.center)
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 30)
                     
                     HStack(spacing: 8) {
