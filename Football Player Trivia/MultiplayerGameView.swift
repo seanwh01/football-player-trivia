@@ -264,7 +264,7 @@ struct MultiplayerGameView: View {
                                     .foregroundColor(.white)
                                     .padding(.top, 8)
                                 
-                                ForEach(viewModel.correctPlayers, id: \.id) { player in
+                                ForEach(viewModel.correctPlayers, id: \.playerId) { player in
                                     Text("\(player.firstName) \(player.lastName)")
                                         .font(.system(size: 22, weight: .bold))
                                         .foregroundColor(.orange)
