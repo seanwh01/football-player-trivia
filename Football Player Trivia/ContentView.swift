@@ -250,10 +250,10 @@ struct ContentView: View {
         } message: {
             Text("Choose whether to host a game or join a nearby game")
         }
-        .sheet(isPresented: $showMultiplayerHost) {
+        .fullScreenCover(isPresented: $showMultiplayerHost) {
             MultiplayerHostSetupView(settings: gameSettings, isPresented: $showMultiplayerHost)
         }
-        .sheet(isPresented: $showMultiplayerJoin) {
+        .fullScreenCover(isPresented: $showMultiplayerJoin) {
             MultiplayerJoinView(isPresented: $showMultiplayerJoin)
         }
     }
