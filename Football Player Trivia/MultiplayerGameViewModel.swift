@@ -29,7 +29,7 @@ class MultiplayerGameViewModel: ObservableObject {
     @Published var isFinalLeaderboard = false
     @Published var leaderboard: [LeaderboardEntry] = []
     @Published var leaderboardTimeRemaining: TimeInterval = 5.0
-    @Published var answerDisplayTimeRemaining: TimeInterval = 5.0
+    @Published var answerDisplayTimeRemaining: TimeInterval = 8.0
     @Published var showLeaveConfirmation = false
     @Published var hostDisconnected = false
     
@@ -97,6 +97,9 @@ class MultiplayerGameViewModel: ObservableObject {
             multiplayerManager.broadcastGameEnd()
             return
         }
+        
+        // Clear previous question's correct answers NOW (at start of new question)
+        correctPlayers = []
         
         // Generate random question based on settings
         let question = generateQuestion(from: settings)
@@ -184,6 +187,10 @@ class MultiplayerGameViewModel: ObservableObject {
     
     private func receiveQuestion(_ question: TriviaQuestion) {
         print("📩 Player received question \(currentQuestionNumber + 1): \(question.questionText)")
+        
+        // Clear previous question's correct answers NOW (at start of new question)
+        correctPlayers = []
+        
         currentQuestion = question
         currentQuestionNumber += 1
         resetForNewQuestion()
@@ -386,9 +393,52 @@ class MultiplayerGameViewModel: ObservableObject {
             hasAnswered = true
             lastAnswerCorrect = false
             
+            // Populate correctPlayers so they can see what the answer was
+            if let question = currentQuestion, correctPlayers.isEmpty {
+                populateCorrectPlayersForDisplay(question: question)
+            }
+            
             // Submit as incorrect with max time
             multiplayerManager.submitAnswer("", isCorrect: false, responseTime: 20.0)
         }
+    }
+    
+    private func populateCorrectPlayersForDisplay(question: TriviaQuestion) {
+        // Get all valid players for display when time expires or answer is wrong
+        let limit = getPlayerLimit(for: question.position)
+        let singlePlayerPositions = ["Quarterback", "Tight End", "Kicker"]
+        let snapType: String
+        
+        if question.position == "Kicker" {
+            snapType = "special_teams"
+        } else if ["Linebacker", "Defensive Back", "Defensive Linemen"].contains(question.position) {
+            snapType = "defense"
+        } else {
+            snapType = "offense"
+        }
+        
+        if singlePlayerPositions.contains(question.position) {
+            if let topPlayer = DatabaseManager.shared.getTopPlayerAtPosition(
+                position: question.position,
+                year: question.year,
+                team: question.team,
+                snapType: snapType
+            ) {
+                correctPlayers = [topPlayer]
+            } else {
+                correctPlayers = []
+            }
+        } else {
+            correctPlayers = DatabaseManager.shared.getTopPlayersAtPosition(
+                position: question.position,
+                year: question.year,
+                team: question.team,
+                limit: limit,
+                snapType: snapType
+            )
+        }
+        
+        print("📋 Populated correct players for display: \(correctPlayers.map { "\($0.firstName) \($0.lastName)" }.joined(separator: ", "))")
     }
     
     // MARK: - Leaderboard
@@ -410,7 +460,7 @@ class MultiplayerGameViewModel: ObservableObject {
     }
     
     private func startAnswerDisplayTimer() {
-        answerDisplayTimeRemaining = 5.0
+        answerDisplayTimeRemaining = 8.0  // Increased from 5 to 8 seconds for better readability
         
         answerDisplayTimer?.invalidate()
         answerDisplayTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
@@ -490,6 +540,13 @@ class MultiplayerGameViewModel: ObservableObject {
             currentPlayerScore = myEntry.score
         }
         
+        // Ensure correctPlayers is populated so answer screen shows properly
+        // This handles cases where validation was fast or time expired without populating
+        if correctPlayers.isEmpty, let question = currentQuestion {
+            print("⚠️ correctPlayers empty when leaderboard arrived - populating now")
+            populateCorrectPlayersForDisplay(question: question)
+        }
+        
         // Players: show answer for 5 seconds first, then leaderboard
         if !multiplayerManager.isHost {
             startAnswerDisplayTimer()
@@ -554,7 +611,7 @@ class MultiplayerGameViewModel: ObservableObject {
         hasAnswered = false
         isValidating = false
         lastAnswerCorrect = false
-        correctPlayers = []
+        // DON'T clear correctPlayers here - it needs to display during answer screen
         timeRemaining = 20.0
         playerAnswers.removeAll()
     }
