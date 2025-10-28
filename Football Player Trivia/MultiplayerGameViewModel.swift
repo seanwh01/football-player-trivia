@@ -41,7 +41,8 @@ class MultiplayerGameViewModel: ObservableObject {
     private var leaderboardTimer: Timer?
     private var answerDisplayTimer: Timer?
     private var answerStartTime: Date?
-    private var playerAnswers: [String: PlayerAnswer] = [:]
+    private var playerAnswers: [String: PlayerAnswer] = [:] // Current question only
+    private var cumulativeScores: [String: Int] = [:] // Tracks total scores across all questions
     
     var totalQuestions: Int {
         multiplayerManager.gameSettings?.questionCount ?? 12
@@ -498,35 +499,33 @@ class MultiplayerGameViewModel: ObservableObject {
     }
     
     private func calculateLeaderboard() -> [LeaderboardEntry] {
-        var scores: [String: (score: Int, totalTime: TimeInterval, answerCount: Int)] = [:]
-        
-        // Add host's score
-        let hostName = multiplayerManager.playerName
-        scores[hostName] = (currentPlayerScore, 0, 0)
-        
-        // Add peer scores (would need to track across all questions in production)
+        // Update cumulative scores from current question's answers
         for (playerName, answer) in playerAnswers {
-            if var existing = scores[playerName] {
-                existing.score += answer.points
-                existing.totalTime += answer.responseTime
-                existing.answerCount += 1
-                scores[playerName] = existing
-            } else {
-                scores[playerName] = (answer.points, answer.responseTime, 1)
-            }
+            cumulativeScores[playerName, default: 0] += answer.points
+            print("📊 Updated cumulative score for \(playerName): \(cumulativeScores[playerName] ?? 0) (+\(answer.points))")
         }
         
-        // Convert to leaderboard entries
-        let unsortedEntries = scores.map { name, data -> LeaderboardEntry in
+        // Add host's cumulative score if not already tracked
+        let hostName = multiplayerManager.playerName
+        if cumulativeScores[hostName] == nil {
+            cumulativeScores[hostName] = currentPlayerScore
+        }
+        
+        print("📊 Current cumulative scores: \(cumulativeScores)")
+        
+        // Create leaderboard entries from cumulative scores
+        let unsortedEntries = cumulativeScores.map { name, score -> LeaderboardEntry in
+            // Get current response time from playerAnswers if available
+            let responseTime = playerAnswers[name]?.responseTime ?? 0
             return LeaderboardEntry(
                 id: name,
                 playerName: name,
-                score: data.score,
-                averageResponseTime: data.answerCount > 0 ? data.totalTime / Double(data.answerCount) : 0
+                score: score,
+                averageResponseTime: responseTime
             )
         }
         
-        // Sort by score (descending), then by average response time (ascending)
+        // Sort by score (descending), then by response time (ascending)
         let entries = unsortedEntries.sorted { first, second in
             if first.score != second.score {
                 return first.score > second.score
