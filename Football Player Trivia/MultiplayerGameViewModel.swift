@@ -483,6 +483,13 @@ class MultiplayerGameViewModel: ObservableObject {
         leaderboard = entries
         isFinalLeaderboard = currentQuestionNumber >= totalQuestions
         
+        // Update local player's score from leaderboard (ensures sync with host's calculation)
+        if !multiplayerManager.isHost {
+            if let myEntry = entries.first(where: { $0.playerName == multiplayerManager.playerName }) {
+                currentPlayerScore = myEntry.score
+            }
+        }
+        
         // Players: show answer for 5 seconds first, then leaderboard
         if !multiplayerManager.isHost {
             startAnswerDisplayTimer()
@@ -545,7 +552,9 @@ class MultiplayerGameViewModel: ObservableObject {
     private func resetForNewQuestion() {
         userAnswer = ""
         hasAnswered = false
+        isValidating = false
         lastAnswerCorrect = false
+        correctPlayers = []
         timeRemaining = 20.0
         playerAnswers.removeAll()
     }
