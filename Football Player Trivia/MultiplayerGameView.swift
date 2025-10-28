@@ -43,7 +43,6 @@ struct MultiplayerGameView: View {
                 }
             }
         }
-        .ignoresSafeArea(.all)
         .navigationBarBackButtonHidden(true)
         .navigationBarTitleDisplayMode(.inline)
         .alert("Leave Game?", isPresented: $viewModel.showLeaveConfirmation) {
@@ -170,13 +169,15 @@ struct MultiplayerGameView: View {
     // MARK: - Question View
     
     private var questionView: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 24) {
             // Logo
             Image("PigskinGeniusLogo")
                 .resizable()
                 .scaledToFit()
-                .frame(height: 100)
+                .frame(height: 150)
                 .padding(.top, 10)
+            
+            Spacer()
             
             if let question = viewModel.currentQuestion {
                 // Question Text
@@ -244,76 +245,66 @@ struct MultiplayerGameView: View {
                         .padding(.horizontal, 40)
                     }
                 } else {
-                    ScrollView {
-                        VStack(spacing: 12) {
-                            Image(systemName: viewModel.lastAnswerCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                .font(.system(size: 60))
-                                .foregroundColor(viewModel.lastAnswerCorrect ? .green : .red)
-                            
-                            Text(viewModel.lastAnswerCorrect ? "Correct!" : "Incorrect")
-                                .font(.title)
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                            
-                            // Always show correct answers (whether user was right or wrong)
-                            if !viewModel.correctPlayers.isEmpty {
-                                if viewModel.correctPlayers.count > 1 {
-                                    VStack(spacing: 6) {
-                                        Text("The correct answers include:")
-                                            .font(.headline)
-                                            .foregroundColor(.white)
-                                            .padding(.top, 8)
-                                        
-                                        ForEach(viewModel.correctPlayers, id: \.playerId) { player in
-                                            Text("\(player.firstName) \(player.lastName)")
-                                                .font(.system(size: 18, weight: .bold))
-                                                .foregroundColor(.orange)
-                                                .lineLimit(1)
-                                                .minimumScaleFactor(0.8)
-                                        }
-                                    }
-                                    .multilineTextAlignment(.center)
-                                    .padding(.horizontal, 20)
-                                } else if let firstPlayer = viewModel.correctPlayers.first {
-                                    VStack(spacing: 4) {
-                                        Text("Answer:")
-                                            .font(.headline)
-                                            .foregroundColor(.white)
-                                        
-                                        Text("\(firstPlayer.firstName) \(firstPlayer.lastName)")
-                                            .font(.system(size: 24, weight: .bold))
+                    VStack(spacing: 12) {
+                        Image(systemName: viewModel.lastAnswerCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
+                            .font(.system(size: 60))
+                            .foregroundColor(viewModel.lastAnswerCorrect ? .green : .red)
+                        
+                        Text(viewModel.lastAnswerCorrect ? "Correct!" : "Incorrect")
+                            .font(.title)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                        
+                        // Always show correct answers (whether user was right or wrong)
+                        if !viewModel.correctPlayers.isEmpty {
+                            if viewModel.correctPlayers.count > 1 {
+                                VStack(spacing: 8) {
+                                    Text("The correct answers include:")
+                                        .font(.headline)
+                                        .foregroundColor(.white)
+                                        .padding(.top, 8)
+                                    
+                                    ForEach(viewModel.correctPlayers, id: \.playerId) { player in
+                                        Text("\(player.firstName) \(player.lastName)")
+                                            .font(.system(size: 22, weight: .bold))
                                             .foregroundColor(.orange)
-                                            .lineLimit(2)
-                                            .minimumScaleFactor(0.8)
                                     }
-                                    .multilineTextAlignment(.center)
-                                    .padding(.horizontal, 20)
                                 }
-                            }
-                            
-                            // Points scored on this question
-                            Text("Points Scored: \(viewModel.currentQuestionPoints)")
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundColor(viewModel.currentQuestionPoints > 0 ? .green : .red)
-                                .padding(.top, 12)
-                                .padding(.bottom, 8)
-                            
-                            if !multiplayerManager.isHost {
-                                Text("Waiting for all players...")
-                                    .font(.caption)
-                                    .foregroundColor(.white.opacity(0.7))
-                                    .padding(.bottom, 20)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 20)
+                            } else if let firstPlayer = viewModel.correctPlayers.first {
+                                VStack(spacing: 4) {
+                                    Text("Answer:")
+                                        .font(.headline)
+                                        .foregroundColor(.white)
+                                    
+                                    Text("\(firstPlayer.firstName) \(firstPlayer.lastName)")
+                                        .font(.system(size: 28, weight: .bold))
+                                        .foregroundColor(.orange)
+                                }
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 20)
                             }
                         }
-                        .padding(.vertical, 10)
+                        
+                        // Points scored on this question
+                        Text("Points Scored: \(viewModel.currentQuestionPoints)")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(viewModel.currentQuestionPoints > 0 ? .green : .red)
+                            .padding(.top, 16)
+                        
+                        if !multiplayerManager.isHost {
+                            Text("Waiting for all players...")
+                                .font(.caption)
+                                .foregroundColor(.white.opacity(0.7))
+                                .padding(.top, 8)
+                        }
                     }
-                    .frame(maxHeight: .infinity)
                 }
             }
             
-            Spacer(minLength: 20)
+            Spacer()
         }
-        .padding(.bottom, 10)
     }
     
     // MARK: - Leaderboard View
