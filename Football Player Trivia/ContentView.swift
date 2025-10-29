@@ -169,6 +169,14 @@ struct ContentView: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    NavigationLink(destination: HowToPlayView()) {
+                        Image(systemName: "info.circle")
+                            .foregroundColor(.white)
+                            .font(.title3)
+                    }
+                }
+                
                 ToolbarItem(placement: .navigationBarTrailing) {
                     NavigationLink(destination: SettingsView(settings: gameSettings)) {
                         Image(systemName: "gear")

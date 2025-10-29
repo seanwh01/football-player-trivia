@@ -36,11 +36,21 @@
 		E5E585CF2EABB5CB003B64CC /* Football Player TriviaUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Football Player TriviaUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		E5E586202EABC100003B64CC /* Exceptions for "Football Player Trivia" folder in "Football Player Trivia" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = E5E585B02EABB5CA003B64CC /* Football Player Trivia */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		E5E585B32EABB5CA003B64CC /* Football Player Trivia */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				E5E586202EABC100003B64CC /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+				E5E586202EABC100003B64CC /* Exceptions for "Football Player Trivia" folder in "Football Player Trivia" target */,
 			);
 			path = "Football Player Trivia";
 			sourceTree = "<group>";
@@ -56,16 +66,6 @@
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
-
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-	E5E586202EABC100003B64CC /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
-		isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-		membershipExceptions = (
-			Info.plist,
-		);
-		target = E5E585B02EABB5CA003B64CC /* Football Player Trivia */;
-	};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		E5E585AE2EABB5CA003B64CC /* Frameworks */ = {
