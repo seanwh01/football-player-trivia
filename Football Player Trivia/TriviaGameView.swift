@@ -842,7 +842,7 @@ struct TriviaGameView: View {
         // Increment hint count
         settings.sessionHintCount += 1
         
-        // Check if we should show an interstitial ad (every 3rd hint)
+        // Check if we should show an interstitial ad (every 4th hint)
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
            let rootViewController = windowScene.windows.first?.rootViewController {
             

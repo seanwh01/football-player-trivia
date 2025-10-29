@@ -30,7 +30,7 @@ class AdMobManager: NSObject, ObservableObject {
     
     // MARK: - Configuration
     
-    private let hintCountForInterstitial = 5 // Show ad every 5th hint
+    private let hintCountForInterstitial = 4 // Show ad every 4th hint
     
     private override init() {
         super.init()
