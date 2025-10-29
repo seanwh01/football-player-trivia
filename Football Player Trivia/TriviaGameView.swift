@@ -343,6 +343,10 @@ struct TriviaGameView: View {
             questionHistory = []
             showHalftimeShow = false
             showGameOver = false
+            
+            // CRITICAL: Reset selected teams to all teams
+            // Otherwise Single Player mode will detect 2 teams and show scoreboard
+            settings.selectedTeams = Set(settings.allTeams)
         }
         .sheet(isPresented: $showHalftimeShow) {
             HalftimeShowView(
