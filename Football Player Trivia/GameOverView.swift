@@ -11,7 +11,6 @@ struct GameOverView: View {
     let teams: [String]
     let scores: [String: Int]
     let questionHistory: [(team: String, position: String)]
-    let questionsServed: [String: Int]
     let onClose: () -> Void
     let onPlayAgain: () -> Void
     
@@ -38,19 +37,7 @@ struct GameOverView: View {
         let score1 = scores[team1] ?? 0
         let score2 = scores[team2] ?? 0
         
-        // Time of possession (based on total questions served, not just correct answers)
-        let team1Questions = questionsServed[team1] ?? 0
-        let team2Questions = questionsServed[team2] ?? 0
-        
         var summary = ""
-        
-        if team1Questions > team2Questions {
-            summary += "Time of possession was in favor of \(team1), who had \(team1Questions) questions compared to \(team2)'s \(team2Questions). "
-        } else if team2Questions > team1Questions {
-            summary += "Time of possession was in favor of \(team2), who had \(team2Questions) questions compared to \(team1)'s \(team1Questions). "
-        } else {
-            summary += "The time of possession was equal between the teams with each getting \(team1Questions) questions. "
-        }
         
         // Position battles
         var team1Positions: Set<String> = []

@@ -11,62 +11,29 @@ struct CompactScoreboardView: View {
     let teams: [String]
     let scores: [String: Int]
     let questionNumber: Int
+    let totalQuestions: Int
     
-    private var quarterInfo: (quarter: String, progress: String) {
-        // 12 questions total (3 per quarter)
-        // questionNumber = number of questions ANSWERED, shows UPCOMING question
-        let questionsPerQuarter = 3
-        let totalQuestions = questionsPerQuarter * 4
-        
+    private var questionInfo: String {
         if questionNumber == 0 {
-            return ("Pre-Game", "\(totalQuestions) Question Challenge")
-        } else if questionNumber < questionsPerQuarter {
-            // In Q1, show upcoming question
-            return ("First Quarter", "Q\(questionNumber + 1) of \(questionsPerQuarter)")
-        } else if questionNumber == questionsPerQuarter {
-            // Just finished Q1, starting Q2
-            return ("Start of Second Quarter", "Q1 of \(questionsPerQuarter)")
-        } else if questionNumber < questionsPerQuarter * 2 {
-            // In Q2, show upcoming question
-            let nextQ = (questionNumber % questionsPerQuarter) + 1
-            return ("Second Quarter", "Q\(nextQ) of \(questionsPerQuarter)")
-        } else if questionNumber == questionsPerQuarter * 2 {
-            // Just finished Q2, starting Q3
-            return ("Start of Third Quarter", "Q1 of \(questionsPerQuarter)")
-        } else if questionNumber < questionsPerQuarter * 3 {
-            // In Q3, show upcoming question
-            let nextQ = (questionNumber % questionsPerQuarter) + 1
-            return ("Third Quarter", "Q\(nextQ) of \(questionsPerQuarter)")
-        } else if questionNumber == questionsPerQuarter * 3 {
-            // Just finished Q3, starting Q4
-            return ("Start of Fourth Quarter", "Q1 of \(questionsPerQuarter)")
-        } else if questionNumber < questionsPerQuarter * 4 {
-            // In Q4, show upcoming question
-            let nextQ = (questionNumber % questionsPerQuarter) + 1
-            return ("Fourth Quarter", "Q\(nextQ) of \(questionsPerQuarter)")
+            return "\(totalQuestions) Question Challenge"
+        } else if questionNumber >= totalQuestions {
+            return "Final Score"
         } else {
-            return ("Final Score", "")
+            return "Question \(questionNumber + 1) of \(totalQuestions)"
         }
     }
     
     var body: some View {
         VStack(spacing: 0) {
-            // Quarter header
+            // Question counter header
             HStack {
                 Spacer()
-                VStack(spacing: 2) {
-                    Text(quarterInfo.quarter)
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(.white)
-                    if !quarterInfo.progress.isEmpty {
-                        Text(quarterInfo.progress)
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundColor(.yellow)
-                    }
-                }
+                Text(questionInfo)
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(.yellow)
                 Spacer()
             }
-            .padding(.vertical, 4)
+            .padding(.vertical, 6)
             .background(Color.black.opacity(0.9))
             
             HStack(spacing: 0) {
@@ -213,9 +180,9 @@ struct CompactScoreboardView: View {
     ZStack {
         Color.black.ignoresSafeArea()
         VStack(spacing: 20) {
-            CompactScoreboardView(teams: ["KC", "WAS"], scores: ["KC": 3, "WAS": 2], questionNumber: 3)
+            CompactScoreboardView(teams: ["KC", "WAS"], scores: ["KC": 3, "WAS": 2], questionNumber: 3, totalQuestions: 18)
                 .padding()
-            CompactScoreboardView(teams: ["KC", "WAS"], scores: ["KC": 5, "WAS": 4], questionNumber: 8)
+            CompactScoreboardView(teams: ["KC", "WAS"], scores: ["KC": 5, "WAS": 4], questionNumber: 8, totalQuestions: 18)
                 .padding()
         }
     }

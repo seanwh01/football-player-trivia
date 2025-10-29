@@ -35,6 +35,16 @@ struct TriviaGameView: View {
     @State private var pendingHint: (year: Int, hintLevel: String)? = nil
     @State private var lastHintContext: (year: Int, position: String, team: String)? = nil
     
+    // Challenge mode tracking (for Upcoming Game Challenge)
+    @State private var teamScores: [String: Int] = [:]
+    @State private var currentGameTeams: [String] = []
+    @State private var currentQuestionNumber: Int = 0
+    @State private var totalQuestions: Int = 0
+    @State private var showHalftimeShow: Bool = false
+    @State private var showGameOver: Bool = false
+    @State private var usedCombinations: Set<String> = []
+    @State private var questionHistory: [(team: String, position: String)] = []
+    
     @FocusState private var isTextFieldFocused: Bool
     
     @StateObject private var adManager = AdMobManager.shared
@@ -62,6 +72,10 @@ struct TriviaGameView: View {
     
     private var isPlayerInputActive: Bool {
         positionLocked && yearLocked && teamLocked
+    }
+    
+    private var isInChallengeMode: Bool {
+        !currentGameTeams.isEmpty
     }
     
     private var availableTeamsForYear: [String] {
@@ -241,6 +255,19 @@ struct TriviaGameView: View {
                 }
                 .padding(.vertical, 10)
                 
+                // Scoreboard (for Challenge Mode)
+                if isInChallengeMode {
+                    CompactScoreboardView(
+                        teams: currentGameTeams,
+                        scores: teamScores,
+                        questionNumber: currentQuestionNumber,
+                        totalQuestions: totalQuestions
+                    )
+                    .transition(.scale.combined(with: .opacity))
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 8)
+                }
+                
                 Spacer(minLength: 10)
                 
                 // Banner Ad
@@ -289,12 +316,38 @@ struct TriviaGameView: View {
             isReady = true
             autoSelectSingleValues()
             setupNotifications()
+            initializeScoreboard()
             
             // Load first interstitial ad
             adManager.loadInterstitialAd()
         }
         .onDisappear {
             removeNotifications()
+        }
+        .sheet(isPresented: $showHalftimeShow) {
+            HalftimeShowView(
+                teams: currentGameTeams,
+                scores: teamScores,
+                onContinue: {
+                    showHalftimeShow = false
+                }
+            )
+        }
+        .overlay {
+            if showGameOver {
+                GameOverView(
+                    teams: currentGameTeams,
+                    scores: teamScores,
+                    questionHistory: questionHistory,
+                    onClose: {
+                        closeGame()
+                    },
+                    onPlayAgain: {
+                        playAgain()
+                    }
+                )
+                .transition(.opacity)
+            }
         }
     }
     
@@ -332,6 +385,16 @@ struct TriviaGameView: View {
                 title: Text("Result"),
                 message: Text(resultMessage),
                 dismissButton: .default(Text("Next Question")) {
+                    // Check if game over after final question
+                    if isInChallengeMode && currentQuestionNumber >= totalQuestions {
+                        showGameOver = true
+                        return
+                    }
+                    
+                    // Check if halftime (halfway point)
+                    if isInChallengeMode && currentQuestionNumber == totalQuestions / 2 {
+                        showHalftimeShow = true
+                    }
                     resetForNextQuestion()
                 }
             )
@@ -404,15 +467,149 @@ struct TriviaGameView: View {
     // MARK: - Helper Functions
     
     private func getAvailablePositions() -> [String] {
-        return settings.getAvailablePositions()
+        // If not in challenge mode, return all positions
+        if !isInChallengeMode {
+            return settings.getAvailablePositions()
+        }
+        
+        // In challenge mode, filter out positions with no remaining combinations
+        return settings.getAvailablePositions().filter { position in
+            hasAvailableCombination(position: position)
+        }
     }
     
     private func getAvailableYears() -> [String] {
-        return settings.getAvailableYears()
+        // If not in challenge mode, return all years
+        if !isInChallengeMode || !positionLocked {
+            return settings.getAvailableYears()
+        }
+        
+        // In challenge mode, filter years that still have valid combinations
+        return settings.getAvailableYears().filter { year in
+            hasAvailableTeamsForYear(position: selectedPosition, year: year)
+        }
     }
     
     private func filterTeamsForCombination(_ teams: [String], year: String) -> [String] {
-        return teams
+        // If not in challenge mode, return all teams
+        if !isInChallengeMode || !positionLocked || !yearLocked {
+            return teams
+        }
+        
+        // In challenge mode, filter out used combinations
+        return teams.filter { team in
+            let combo = "\(selectedPosition)|\(year)|\(team)"
+            return !usedCombinations.contains(combo)
+        }
+    }
+    
+    private func hasAvailableCombination(position: String) -> Bool {
+        let allYears = settings.getAvailableYears()
+        for year in allYears {
+            let teams = settings.getTeamsForYear(Int(year) ?? 0)
+            for team in teams where currentGameTeams.contains(team) {
+                let combo = "\(position)|\(year)|\(team)"
+                if !usedCombinations.contains(combo) {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+    
+    private func hasAvailableTeamsForYear(position: String, year: String) -> Bool {
+        let teams = settings.getTeamsForYear(Int(year) ?? 0)
+        for team in teams where currentGameTeams.contains(team) {
+            let combo = "\(position)|\(year)|\(team)"
+            if !usedCombinations.contains(combo) {
+                return true
+            }
+        }
+        return false
+    }
+    
+    // MARK: - Scoreboard Management
+    
+    private func initializeScoreboard() {
+        // Initialize scoreboard on game start
+        updateScoreboardDisplay()
+    }
+    
+    private func updateScoreboardDisplay() {
+        // Only show scoreboard if exactly 2 teams are selected (challenge mode)
+        let availableTeams = settings.getAvailableTeams()
+        
+        if availableTeams.count == 2 {
+            let sortedTeams = availableTeams.sorted()
+            
+            // Check if teams changed (new challenge started)
+            if currentGameTeams != sortedTeams {
+                // Reset scores, question counter, and used combinations for new teams
+                teamScores = [:]
+                currentQuestionNumber = 0
+                usedCombinations = []
+                questionHistory = []
+                currentGameTeams = sortedTeams
+                
+                // Calculate total questions: positions × years × 2 teams
+                let positions = settings.getAvailablePositions()
+                let years = settings.getAvailableYears()
+                totalQuestions = positions.count * years.count * 2
+                
+                // Initialize scores for both teams
+                for team in currentGameTeams {
+                    teamScores[team] = 0
+                }
+            }
+        } else {
+            // Clear scoreboard if not in 2-team challenge mode
+            currentGameTeams = []
+            usedCombinations = []
+            questionHistory = []
+            totalQuestions = 0
+        }
+    }
+    
+    private func updateTeamScore(for team: String, position: String) {
+        teamScores[team, default: 0] += 1
+        questionHistory.append((team: team, position: position))
+    }
+    
+    private func closeGame() {
+        // End challenge mode - reset to all teams
+        settings.selectedTeams = Set(settings.allTeams)
+        
+        // Reset all game state
+        teamScores = [:]
+        currentGameTeams = []
+        currentQuestionNumber = 0
+        totalQuestions = 0
+        usedCombinations = []
+        questionHistory = []
+        showGameOver = false
+        
+        // Reset wheel state
+        resetForNextQuestion()
+        
+        // Navigate back to welcome screen
+        presentationMode.wrappedValue.dismiss()
+    }
+    
+    private func playAgain() {
+        // Keep the same 2 teams, just reset scores and start over
+        teamScores = [:]
+        currentQuestionNumber = 0
+        usedCombinations = []
+        questionHistory = []
+        showGameOver = false
+        
+        // Initialize scores for both teams
+        for team in currentGameTeams {
+            teamScores[team] = 0
+        }
+        
+        // Reset wheel state
+        resetForNextQuestion()
     }
     
     // MARK: - Game Logic
@@ -490,8 +687,25 @@ struct TriviaGameView: View {
                 
                 if response.isCorrect {
                     self.settings.sessionCorrect += 1
+                    
+                    // Update team score if in challenge mode
+                    if self.isInChallengeMode {
+                        self.updateTeamScore(for: self.selectedTeam, position: self.selectedPosition)
+                    }
                 }
                 self.settings.sessionTotal += 1
+                
+                // Increment question counter and mark combination as used in challenge mode
+                if self.isInChallengeMode {
+                    self.currentQuestionNumber += 1
+                    
+                    // Mark this combination as used to prevent duplicates
+                    let combo = "\(self.selectedPosition)|\(self.selectedYear)|\(self.selectedTeam)"
+                    self.usedCombinations.insert(combo)
+                }
+                
+                // Update scoreboard display
+                self.updateScoreboardDisplay()
                 
                 self.activeAlert = .result
                 
