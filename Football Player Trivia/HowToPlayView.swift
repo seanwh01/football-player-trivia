@@ -12,16 +12,9 @@ struct HowToPlayView: View {
     
     var body: some View {
         ZStack {
-            // Background gradient
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color(red: 0.0, green: 0.3, blue: 0.1),
-                    Color(red: 0.1, green: 0.5, blue: 0.2)
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            // Black background
+            Color.black
+                .ignoresSafeArea()
             
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
@@ -50,12 +43,14 @@ struct HowToPlayView: View {
                         title: "Single Player Trivia Game",
                         description: "Test your NFL knowledge solo",
                         steps: [
-                            "Spin the wheel to select Position, Year, and Team",
+                            "Settings determine the parameters of play",
+                            "Spin the wheels to select Position, Year and Team",
                             "Each spin locks in a selection",
+                            "No Spin needed if there is only a single selection",
                             "After all three spins, enter the player's name",
-                            "Get hints if you need help (General or More Obvious)",
-                            "Track your progress with session stats",
-                            "Play as many questions as you want!"
+                            "Get hints if you need help (General or More Obvious - based on settings)",
+                            "Track your success rate within a session",
+                            "Play as many questions as you want"
                         ]
                     )
                     
@@ -70,14 +65,12 @@ struct HowToPlayView: View {
                         title: "Upcoming Game Challenge",
                         description: "Compete between two teams from an upcoming NFL matchup",
                         steps: [
-                            "Select from real upcoming NFL games",
-                            "Play a complete game with all positions for both teams",
-                            "Every question is unique - no repeats!",
-                            "Scoreboard shows Question X of Y (e.g., Question 5 of 18)",
-                            "Correct answers score points for that team",
+                            "The game auto selects the upcoming game from the current season schedule based on your favorite team setting",
+                            "The game will ask all positional questions for both teams (every question unique, no repeats)",
+                            "Scoreboard shows number of questions answered correctly for each team",
+                            "Each question worth one point",
                             "Halftime show appears at the halfway point",
-                            "Game Over summary shows position battles and winner",
-                            "Challenge yourself to beat both teams!"
+                            "Game summary shows positional battle winner and overall winner"
                         ]
                     )
                     
@@ -92,16 +85,18 @@ struct HowToPlayView: View {
                         title: "Head to Head Trivia Game",
                         description: "Compete against friends in real-time multiplayer",
                         steps: [
-                            "Host creates a game and sets options:",
-                            "  • Number of questions (5-20)",
-                            "  • Time per question (10-60 seconds)",
+                            "Host sets up game parameters",
+                            "  • Number of questions",
+                            "  • Time to answer",
                             "  • Enable/disable hints",
-                            "Players join using the lobby code",
-                            "Host spins for each question's criteria",
+                            "  • Parameters for positions, year(s), and team(s)",
+                            "  • The parameters selected must support the number of questions to enable uniqueness",
+                            "Players join by clicking Head to Head Trivia Game on their application and selecting \"Join Nearby Game\"",
+                            "System randomly selects questions based on parameters host set",
+                            "All questions will be unique",
                             "All players race to answer correctly",
-                            "Faster correct answers = more points!",
-                            "Live leaderboard between questions",
-                            "Final results show winner and stats"
+                            "Points are awarded based on time needed to answer correctly",
+                            "Live leaderboard between questions"
                         ]
                     )
                     
@@ -114,34 +109,11 @@ struct HowToPlayView: View {
                         title: "Multiplayer Tips & Connectivity",
                         icon: "wifi",
                         tips: [
-                            "All devices must be on the same WiFi network",
-                            "Bluetooth must be enabled on all devices",
-                            "Stay within 30 feet of each other for best connection",
-                            "Host should not leave - game will end for all players",
-                            "If connection issues occur, restart the game",
-                            "3-8 players recommended for best experience",
-                            "Text field auto-focuses - start typing immediately!",
-                            "Practice with Single Player to learn player names"
-                        ]
-                    )
-                    
-                    Divider()
-                        .background(Color.white.opacity(0.3))
-                        .padding(.vertical, 8)
-                    
-                    // General Tips
-                    TipsSection(
-                        title: "Pro Tips",
-                        icon: "star.fill",
-                        tips: [
-                            "First and last names are usually enough (e.g., 'Patrick Mahomes')",
-                            "Nicknames sometimes work (e.g., 'Pat Mahomes')",
-                            "Spelling matters - use hints if unsure",
-                            "Session stats track your progress",
-                            "Different years = different rosters",
-                            "Position battles show team depth",
-                            "Text field auto-focuses after each spin/question",
-                            "Speed matters in multiplayer mode!"
+                            "Players need to keep app open the entire game",
+                            "Don't switch to other apps or lock your device",
+                            "Stay within 30 feet of each other for best results",
+                            "If Host closes game, game ends for all",
+                            "Supports up to 8 players, though results may improve with 6 or less"
                         ]
                     )
                     
