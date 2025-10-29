@@ -128,7 +128,7 @@ struct ContentView: View {
                         NavigationLink(destination: TriviaGameView(settings: gameSettings)) {
                             VStack(spacing: 6) {
                                 HStack {
-                                    Image(systemName: "brain.head.profile")
+                                    Image(systemName: "person.fill")
                                     Text("Single Player Trivia Game")
                                         .font(.title3)
                                         .fontWeight(.semibold)
