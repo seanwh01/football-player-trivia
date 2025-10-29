@@ -648,24 +648,54 @@ class MultiplayerGameViewModel: ObservableObject {
         guard let question = currentQuestion else { return }
         hasUsedHint = true
         
-        // Populate correctPlayers if not already populated (needed for more obvious hint)
+        // Populate correctPlayers if not already populated
         if correctPlayers.isEmpty {
             populateCorrectPlayersForDisplay(question: question)
         }
         
-        // Generate general hint
-        generalHint = "Position: \(question.position)\nTeam: \(question.team)\nYear: \(question.year)"
+        // Set loading state
+        generalHint = "Loading hint..."
+        moreObviousHint = ""
+        showHintSheet = true
         
-        // Generate more obvious hint if enabled
-        if multiplayerManager.gameSettings?.moreObviousHintsEnabled == true {
-            if let firstPlayer = correctPlayers.first {
-                let firstNameHint = String(firstPlayer.firstName.prefix(2)) + "..." 
-                let lastNameHint = String(firstPlayer.lastName.prefix(1)) + "..."
-                moreObviousHint = "First Name starts with: \(firstNameHint)\nLast Name starts with: \(lastNameHint)"
+        // Determine hint level based on settings
+        let hintLevel = multiplayerManager.gameSettings?.moreObviousHintsEnabled == true ? "More Obvious" : "General"
+        
+        // Call Firebase to generate hint using OpenAI
+        FirebaseService.shared.generateHint(
+            for: correctPlayers,
+            position: question.position,
+            year: question.year,
+            team: question.team,
+            hintLevel: hintLevel
+        ) { [weak self] result in
+            guard let self = self else { return }
+            
+            switch result {
+            case .success(let hint):
+                // Split hint if it contains "More Obvious" additional info
+                if hintLevel == "More Obvious" {
+                    // More Obvious hints contain both general hint + initials/college
+                    let components = hint.components(separatedBy: "\n\n")
+                    if components.count > 1 {
+                        self.generalHint = components[0]
+                        self.moreObviousHint = components[1]
+                    } else {
+                        self.generalHint = hint
+                        self.moreObviousHint = ""
+                    }
+                } else {
+                    self.generalHint = hint
+                    self.moreObviousHint = ""
+                }
+                
+            case .failure(let error):
+                print("❌ Error generating hint: \(error.localizedDescription)")
+                // Fallback to basic hint
+                self.generalHint = "Position: \(question.position)\nTeam: \(question.team)\nYear: \(question.year)"
+                self.moreObviousHint = ""
             }
         }
-        
-        showHintSheet = true
     }
     
     deinit {

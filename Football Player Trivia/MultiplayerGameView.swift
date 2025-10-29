@@ -465,10 +465,6 @@ struct MultiplayerGameView: View {
                     
                     // General Hint
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Information:")
-                            .font(.headline)
-                            .foregroundColor(.orange)
-                        
                         Text(viewModel.generalHint)
                             .font(.body)
                             .foregroundColor(.white)
@@ -476,16 +472,13 @@ struct MultiplayerGameView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .background(Color.white.opacity(0.1))
                             .cornerRadius(10)
+                            .multilineTextAlignment(.leading)
                     }
                     .padding(.horizontal, 30)
                     
-                    // More Obvious Hint (if enabled)
-                    if multiplayerManager.gameSettings?.moreObviousHintsEnabled == true && !viewModel.moreObviousHint.isEmpty {
+                    // Additional Info (for More Obvious hints)
+                    if !viewModel.moreObviousHint.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("More Obvious Hint:")
-                                .font(.headline)
-                                .foregroundColor(.orange)
-                            
                             Text(viewModel.moreObviousHint)
                                 .font(.body)
                                 .foregroundColor(.white)
@@ -493,6 +486,7 @@ struct MultiplayerGameView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .background(Color.orange.opacity(0.2))
                                 .cornerRadius(10)
+                                .multilineTextAlignment(.leading)
                         }
                         .padding(.horizontal, 30)
                     }
