@@ -20,11 +20,15 @@ struct MultiplayerHostSetupView: View {
     @State private var yearFrom = 2024
     @State private var yearTo = 2024
     @State private var questionCount = 12
+    @State private var timeToAnswer = 30
+    @State private var hintsEnabled = false
+    @State private var moreObviousHintsEnabled = false
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var navigateToLobby = false
     
     let questionOptions = [8, 12, 24]
+    let timeOptions = [30, 60, 90]
     
     var body: some View {
         NavigationView {
@@ -54,26 +58,84 @@ struct MultiplayerHostSetupView: View {
                         }
                         .padding(.horizontal)
                         
-                        // Question Count Selection
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Number of Questions")
+                        // Question and Time Settings Section
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Question and Time Settings")
                                 .font(.headline)
                                 .foregroundColor(.orange)
                             
-                            HStack(spacing: 12) {
-                                ForEach(questionOptions, id: \.self) { count in
-                                    Button(action: {
-                                        questionCount = count
-                                    }) {
-                                        Text("\(count)")
-                                            .font(.title3)
-                                            .fontWeight(.semibold)
-                                            .foregroundColor(.white)
-                                            .frame(maxWidth: .infinity)
-                                            .padding(.vertical, 12)
-                                            .background(questionCount == count ? Color.green : Color.gray.opacity(0.3))
-                                            .cornerRadius(10)
+                            // Number of Questions
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Number of Questions")
+                                    .font(.subheadline)
+                                    .foregroundColor(.white.opacity(0.9))
+                                
+                                HStack(spacing: 12) {
+                                    ForEach(questionOptions, id: \.self) { count in
+                                        Button(action: {
+                                            questionCount = count
+                                        }) {
+                                            Text("\(count)")
+                                                .font(.title3)
+                                                .fontWeight(.semibold)
+                                                .foregroundColor(.white)
+                                                .frame(maxWidth: .infinity)
+                                                .padding(.vertical, 12)
+                                                .background(questionCount == count ? Color.green : Color.gray.opacity(0.3))
+                                                .cornerRadius(10)
+                                        }
                                     }
+                                }
+                            }
+                            
+                            // Time to Answer
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Time to Answer (seconds)")
+                                    .font(.subheadline)
+                                    .foregroundColor(.white.opacity(0.9))
+                                
+                                HStack(spacing: 12) {
+                                    ForEach(timeOptions, id: \.self) { time in
+                                        Button(action: {
+                                            timeToAnswer = time
+                                        }) {
+                                            Text("\(time)")
+                                                .font(.title3)
+                                                .fontWeight(.semibold)
+                                                .foregroundColor(.white)
+                                                .frame(maxWidth: .infinity)
+                                                .padding(.vertical, 12)
+                                                .background(timeToAnswer == time ? Color.green : Color.gray.opacity(0.3))
+                                                .cornerRadius(10)
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            // Hints Settings
+                            VStack(alignment: .leading, spacing: 12) {
+                                // General Hints Toggle
+                                Toggle(isOn: $hintsEnabled) {
+                                    Text("Enable Hints")
+                                        .font(.subheadline)
+                                        .foregroundColor(.white.opacity(0.9))
+                                }
+                                .tint(.green)
+                                .onChange(of: hintsEnabled) { enabled in
+                                    if !enabled {
+                                        moreObviousHintsEnabled = false
+                                    }
+                                }
+                                
+                                // More Obvious Hints Toggle (shown only if hints enabled)
+                                if hintsEnabled {
+                                    Toggle(isOn: $moreObviousHintsEnabled) {
+                                        Text("Include More Obvious Hints")
+                                            .font(.subheadline)
+                                            .foregroundColor(.white.opacity(0.9))
+                                            .padding(.leading, 20)
+                                    }
+                                    .tint(.green)
                                 }
                             }
                         }
@@ -383,7 +445,10 @@ struct MultiplayerHostSetupView: View {
             teams: Array(selectedTeams),
             yearFrom: yearFrom,
             yearTo: yearTo,
-            questionCount: questionCount
+            questionCount: questionCount,
+            timeToAnswer: timeToAnswer,
+            hintsEnabled: hintsEnabled,
+            moreObviousHintsEnabled: moreObviousHintsEnabled
         )
         
         multiplayerManager.startHosting(playerName: hostName, settings: gameSettings)

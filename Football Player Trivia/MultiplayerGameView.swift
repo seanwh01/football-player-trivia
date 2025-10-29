@@ -49,6 +49,9 @@ struct MultiplayerGameView: View {
         } message: {
             Text("Are you sure you want to leave the game?")
         }
+        .sheet(isPresented: $viewModel.showHintSheet) {
+            hintSheet
+        }
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button(action: {
@@ -239,6 +242,25 @@ struct MultiplayerGameView: View {
                         }
                         .disabled(!canSubmitAnswer)
                         .padding(.horizontal, 40)
+                        
+                        // Hint Button (if hints are enabled)
+                        if multiplayerManager.gameSettings?.hintsEnabled == true && !viewModel.hasUsedHint {
+                            Button(action: {
+                                viewModel.requestHint()
+                            }) {
+                                HStack {
+                                    Image(systemName: "lightbulb.fill")
+                                    Text("Get Hint")
+                                }
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 24)
+                                .padding(.vertical, 12)
+                                .background(Color.orange)
+                                .cornerRadius(10)
+                            }
+                            .padding(.top, 8)
+                        }
                     }
                 } else {
                     VStack(spacing: 12) {
@@ -428,6 +450,81 @@ struct MultiplayerGameView: View {
         !viewModel.userAnswer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
         !viewModel.hasAnswered &&
         viewModel.isTimerRunning
+    }
+    
+    // MARK: - Hint Sheet
+    
+    private var hintSheet: some View {
+        NavigationView {
+            ZStack {
+                Color.black.opacity(0.95)
+                    .ignoresSafeArea()
+                
+                VStack(spacing: 24) {
+                    // Lightbulb icon
+                    Image(systemName: "lightbulb.fill")
+                        .font(.system(size: 60))
+                        .foregroundColor(.orange)
+                        .padding(.top, 20)
+                    
+                    Text("Hint")
+                        .font(.system(size: 32, weight: .bold))
+                        .foregroundColor(.white)
+                    
+                    // General Hint
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Information:")
+                            .font(.headline)
+                            .foregroundColor(.orange)
+                        
+                        Text(viewModel.generalHint)
+                            .font(.body)
+                            .foregroundColor(.white)
+                            .padding()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.white.opacity(0.1))
+                            .cornerRadius(10)
+                    }
+                    .padding(.horizontal, 30)
+                    
+                    // More Obvious Hint (if enabled)
+                    if multiplayerManager.gameSettings?.moreObviousHintsEnabled == true && !viewModel.moreObviousHint.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("More Obvious Hint:")
+                                .font(.headline)
+                                .foregroundColor(.orange)
+                            
+                            Text(viewModel.moreObviousHint)
+                                .font(.body)
+                                .foregroundColor(.white)
+                                .padding()
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Color.orange.opacity(0.2))
+                                .cornerRadius(10)
+                        }
+                        .padding(.horizontal, 30)
+                    }
+                    
+                    Spacer()
+                    
+                    // Close Button
+                    Button(action: {
+                        viewModel.showHintSheet = false
+                    }) {
+                        Text("Got It!")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(Color.green)
+                            .cornerRadius(12)
+                    }
+                    .padding(.horizontal, 30)
+                    .padding(.bottom, 40)
+                }
+            }
+            .navigationBarTitleDisplayMode(.inline)
+        }
     }
     
     // MARK: - Actions

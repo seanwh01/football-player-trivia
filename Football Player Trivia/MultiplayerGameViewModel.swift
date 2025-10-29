@@ -21,7 +21,7 @@ class MultiplayerGameViewModel: ObservableObject {
     @Published var lastAnswerCorrect = false
     @Published var correctPlayers: [Player] = []
     @Published var currentQuestionPoints = 0
-    @Published var timeRemaining: TimeInterval = 20.0
+    @Published var timeRemaining: TimeInterval = 30.0
     @Published var isTimerRunning = false
     @Published var currentQuestionNumber = 0
     @Published var currentPlayerScore = 0
@@ -33,6 +33,10 @@ class MultiplayerGameViewModel: ObservableObject {
     @Published var answerDisplayTimeRemaining: TimeInterval = 8.0
     @Published var showLeaveConfirmation = false
     @Published var hostDisconnected = false
+    @Published var showHintSheet = false
+    @Published var generalHint = ""
+    @Published var moreObviousHint = ""
+    @Published var hasUsedHint = false
     
     // MARK: - Private Properties
     
@@ -46,6 +50,10 @@ class MultiplayerGameViewModel: ObservableObject {
     
     var totalQuestions: Int {
         multiplayerManager.gameSettings?.questionCount ?? 12
+    }
+    
+    var maxTimeToAnswer: TimeInterval {
+        TimeInterval(multiplayerManager.gameSettings?.timeToAnswer ?? 30)
     }
     
     // MARK: - Initialization
@@ -292,8 +300,11 @@ class MultiplayerGameViewModel: ObservableObject {
                 self.isValidating = false
                 
                 if isCorrect {
-                    // Award points based on speed (10 points max, decreases with time)
-                    let points = max(1, 10 - Int(responseTime / 2))
+                    // Award points based on speed
+                    // Scale: 10 points for instant, decreases proportionally with time
+                    let maxPoints = 10
+                    let timeLimit = self.maxTimeToAnswer
+                    let points = max(1, maxPoints - Int((responseTime / timeLimit) * Double(maxPoints - 1)))
                     self.currentQuestionPoints = points
                     self.currentPlayerScore += points
                 } else {
@@ -338,7 +349,10 @@ class MultiplayerGameViewModel: ObservableObject {
         self.isValidating = false
         
         if isCorrect {
-            let points = max(1, 10 - Int(responseTime / 2))
+            // Award points based on speed (same formula as Firebase validation)
+            let maxPoints = 10
+            let timeLimit = self.maxTimeToAnswer
+            let points = max(1, maxPoints - Int((responseTime / timeLimit) * Double(maxPoints - 1)))
             self.currentQuestionPoints = points
             self.currentPlayerScore += points
         } else {
@@ -351,7 +365,10 @@ class MultiplayerGameViewModel: ObservableObject {
     private func receiveAnswer(from playerID: String, answer: String, isCorrect: Bool, responseTime: TimeInterval) {
         guard multiplayerManager.isHost else { return }
         
-        let points = isCorrect ? max(1, 10 - Int(responseTime / 2)) : 0
+        // Calculate points using same formula
+        let maxPoints = 10
+        let timeLimit = maxTimeToAnswer
+        let points = isCorrect ? max(1, maxPoints - Int((responseTime / timeLimit) * Double(maxPoints - 1))) : 0
         
         playerAnswers[playerID] = PlayerAnswer(
             answer: answer,
@@ -408,7 +425,7 @@ class MultiplayerGameViewModel: ObservableObject {
             }
             
             // Submit as incorrect with max time
-            multiplayerManager.submitAnswer("", isCorrect: false, responseTime: 20.0)
+            multiplayerManager.submitAnswer("", isCorrect: false, responseTime: maxTimeToAnswer)
         }
     }
     
@@ -619,9 +636,31 @@ class MultiplayerGameViewModel: ObservableObject {
         isValidating = false
         lastAnswerCorrect = false
         currentQuestionPoints = 0
+        hasUsedHint = false
+        generalHint = ""
+        moreObviousHint = ""
         // DON'T clear correctPlayers here - it needs to display during answer screen
-        timeRemaining = 20.0
+        timeRemaining = maxTimeToAnswer
         playerAnswers.removeAll()
+    }
+    
+    func requestHint() {
+        guard let question = currentQuestion else { return }
+        hasUsedHint = true
+        
+        // Generate general hint
+        generalHint = "Position: \(question.position)\nTeam: \(question.team)\nYear: \(question.year)"
+        
+        // Generate more obvious hint if enabled
+        if multiplayerManager.gameSettings?.moreObviousHintsEnabled == true {
+            if let firstPlayer = correctPlayers.first {
+                let firstNameHint = String(firstPlayer.firstName.prefix(2)) + "..." 
+                let lastNameHint = String(firstPlayer.lastName.prefix(1)) + "..."
+                moreObviousHint = "First Name starts with: \(firstNameHint)\nLast Name starts with: \(lastNameHint)"
+            }
+        }
+        
+        showHintSheet = true
     }
     
     deinit {

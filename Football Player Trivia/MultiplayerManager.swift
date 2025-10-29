@@ -364,6 +364,9 @@ struct MultiplayerGameSettings: Codable {
     let yearFrom: Int
     let yearTo: Int
     let questionCount: Int
+    let timeToAnswer: Int // 30, 60, or 90 seconds
+    let hintsEnabled: Bool
+    let moreObviousHintsEnabled: Bool
 }
 
 enum GameMessage: Codable {
