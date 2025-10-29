@@ -208,7 +208,7 @@ struct MultiplayerHostSetupView: View {
                     .foregroundColor(.white)
                 }
             }
-            .alert("Error", isPresented: $showError) {
+            .alert("Please Update Parameters", isPresented: $showError) {
                 Button("OK", role: .cancel) { }
             } message: {
                 Text(errorMessage)
@@ -480,7 +480,7 @@ struct MultiplayerHostSetupView: View {
             You need at least \(questionCount) questions.
             
             Please either:
-            • Reduce number of questions to \(availableQuestions) or less
+            • Reduce number of questions
             • Expand year range
             • Select more positions
             • Select more teams
