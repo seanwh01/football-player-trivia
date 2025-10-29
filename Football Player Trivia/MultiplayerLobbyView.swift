@@ -232,10 +232,13 @@ struct MultiplayerLobbyView: View {
         teams: ["KC", "BUF"],
         yearFrom: 2023,
         yearTo: 2024,
-        questionCount: 12
+        questionCount: 12,
+        timeToAnswer: 30,
+        hintsEnabled: false,
+        moreObviousHintsEnabled: false
     )
     
-    return NavigationView {
+    NavigationView {
         MultiplayerLobbyView(multiplayerManager: manager, isPresented: .constant(true))
     }
 }
