@@ -232,12 +232,18 @@ struct MultiplayerGameView: View {
                             .disabled(viewModel.hasAnswered || !viewModel.isTimerRunning)
                             .padding(.horizontal, 40)
                             .focused($isTextFieldFocused)
-                            .onChange(of: viewModel.currentQuestion) { newQuestion in
-                                if newQuestion != nil && !viewModel.hasAnswered {
-                                    // Auto-focus when new question appears
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            .onChange(of: viewModel.isTimerRunning) { isRunning in
+                                // Auto-focus when timer starts (question begins)
+                                if isRunning && !viewModel.hasAnswered {
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                                         isTextFieldFocused = true
                                     }
+                                }
+                            }
+                            .onChange(of: viewModel.hasAnswered) { answered in
+                                // Unfocus when answer is submitted
+                                if answered {
+                                    isTextFieldFocused = false
                                 }
                             }
                         
