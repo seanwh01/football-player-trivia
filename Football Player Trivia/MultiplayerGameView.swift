@@ -51,6 +51,8 @@ struct MultiplayerGameView: View {
         }
         .sheet(isPresented: $viewModel.showHintSheet) {
             hintSheet
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
@@ -452,12 +454,11 @@ struct MultiplayerGameView: View {
     // MARK: - Hint Sheet
     
     private var hintSheet: some View {
-        NavigationView {
-            ZStack {
-                Color.black.opacity(0.95)
-                    .ignoresSafeArea()
-                
-                VStack(spacing: 24) {
+        ZStack {
+            Color.black.opacity(0.95)
+                .ignoresSafeArea()
+            
+            VStack(spacing: 24) {
                     Text("Hint")
                         .font(.system(size: 32, weight: .bold))
                         .foregroundColor(.white)
@@ -508,8 +509,6 @@ struct MultiplayerGameView: View {
                     .padding(.horizontal, 30)
                     .padding(.bottom, 40)
                 }
-            }
-            .navigationBarTitleDisplayMode(.inline)
         }
     }
     
