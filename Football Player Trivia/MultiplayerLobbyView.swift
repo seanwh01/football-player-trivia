@@ -101,13 +101,14 @@ struct MultiplayerLobbyView: View {
             }
             
             // Navigation to game
-            NavigationLink(
-                destination: MultiplayerGameView(multiplayerManager: multiplayerManager, isPresented: $isPresented),
-                isActive: $navigateToGame
-            ) {
-                EmptyView()
-            }
-            .hidden()
+            .background(
+                NavigationLink(
+                    destination: MultiplayerGameView(multiplayerManager: multiplayerManager, isPresented: $isPresented),
+                    isActive: $navigateToGame,
+                    label: { EmptyView() }
+                )
+                .hidden()
+            )
         }
         .navigationBarBackButtonHidden(true)
         .navigationBarTitleDisplayMode(.inline)
@@ -225,20 +226,22 @@ struct MultiplayerLobbyView: View {
 
 #Preview {
     let manager = MultiplayerManager()
-    manager.playerName = "Test Player"
-    manager.isHost = true
-    manager.gameSettings = MultiplayerGameSettings(
-        positions: ["QB", "RB"],
-        teams: ["KC", "BUF"],
-        yearFrom: 2023,
-        yearTo: 2024,
-        questionCount: 12,
-        timeToAnswer: 30,
-        hintsEnabled: false,
-        moreObviousHintsEnabled: false
-    )
+    let _ = {
+        manager.playerName = "Test Player"
+        manager.isHost = true
+        manager.gameSettings = MultiplayerGameSettings(
+            positions: ["QB", "RB"],
+            teams: ["KC", "BUF"],
+            yearFrom: 2023,
+            yearTo: 2024,
+            questionCount: 12,
+            timeToAnswer: 30,
+            hintsEnabled: false,
+            moreObviousHintsEnabled: false
+        )
+    }()
     
-    NavigationView {
+    return NavigationView {
         MultiplayerLobbyView(multiplayerManager: manager, isPresented: .constant(true))
     }
 }
