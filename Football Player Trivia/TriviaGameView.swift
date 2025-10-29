@@ -323,6 +323,17 @@ struct TriviaGameView: View {
         }
         .onDisappear {
             removeNotifications()
+            
+            // Reset challenge mode state when leaving the game
+            // This prevents scoreboard from appearing in Single Player mode
+            currentGameTeams = []
+            teamScores = [:]
+            currentQuestionNumber = 0
+            totalQuestions = 0
+            usedCombinations = []
+            questionHistory = []
+            showHalftimeShow = false
+            showGameOver = false
         }
         .sheet(isPresented: $showHalftimeShow) {
             HalftimeShowView(
