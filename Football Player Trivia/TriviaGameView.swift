@@ -35,6 +35,7 @@ struct TriviaGameView: View {
     @State private var pendingHint: (year: Int, hintLevel: String)? = nil
     @State private var lastHintContext: (year: Int, position: String, team: String)? = nil
     @State private var spinCount: Int = 0 // Track spins for interstitial ads
+    @State private var shouldShowAdAfterAnswer: Bool = false // Flag to show ad after answer
     
     // Challenge mode tracking (for Upcoming Game Challenge)
     @State private var teamScores: [String: Int] = [:]
@@ -191,11 +192,11 @@ struct TriviaGameView: View {
                         bannerAdRefreshTrigger += 1
                         autoSelectSingleValues()
                         
-                        // Show interstitial ad every 8 spins in single player mode
+                        // Track spins for interstitial ad (show after answer submission)
                         if !isInChallengeMode {
                             spinCount += 1
                             if spinCount % 8 == 0 {
-                                showInterstitialAd()
+                                shouldShowAdAfterAnswer = true
                             }
                         }
                     },
@@ -418,6 +419,12 @@ struct TriviaGameView: View {
                 title: Text("Result"),
                 message: Text(resultMessage),
                 dismissButton: .default(Text("Next Question")) {
+                    // Check if we should show ad after this answer (every 8 spins in single player)
+                    if shouldShowAdAfterAnswer && !isInChallengeMode {
+                        showInterstitialAd()
+                        shouldShowAdAfterAnswer = false
+                    }
+                    
                     // Check if game over after final question in challenge mode
                     if isInChallengeMode && currentQuestionNumber >= totalQuestions {
                         // Show interstitial ad before game over screen
