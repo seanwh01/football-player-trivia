@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct TriviaQuestion: Codable, Identifiable {
+struct TriviaQuestion: Codable, Identifiable, Equatable {
     let id: UUID
     let playerFirstName: String
     let playerLastName: String
