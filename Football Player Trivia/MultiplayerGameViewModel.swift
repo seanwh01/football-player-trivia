@@ -37,6 +37,8 @@ class MultiplayerGameViewModel: ObservableObject {
     @Published var generalHint = ""
     @Published var moreObviousHint = ""
     @Published var hasUsedHint = false
+    @Published var hasRequestedMoreObviousHint = false
+    @Published var isLoadingMoreObviousHint = false
     
     // MARK: - Private Properties
     
@@ -414,6 +416,9 @@ class MultiplayerGameViewModel: ObservableObject {
     private func handleTimeExpired() {
         stopQuestionTimer()
         
+        // Close hint sheet if open
+        showHintSheet = false
+        
         if !hasAnswered {
             hasAnswered = true
             lastAnswerCorrect = false
@@ -637,8 +642,11 @@ class MultiplayerGameViewModel: ObservableObject {
         lastAnswerCorrect = false
         currentQuestionPoints = 0
         hasUsedHint = false
+        hasRequestedMoreObviousHint = false
+        isLoadingMoreObviousHint = false
         generalHint = ""
         moreObviousHint = ""
+        showHintSheet = false  // Close hint sheet for new question
         // DON'T clear correctPlayers here - it needs to display during answer screen
         timeRemaining = maxTimeToAnswer
         playerAnswers.removeAll()
@@ -658,42 +666,64 @@ class MultiplayerGameViewModel: ObservableObject {
         moreObviousHint = ""
         showHintSheet = true
         
-        // Determine hint level based on settings
-        let hintLevel = multiplayerManager.gameSettings?.moreObviousHintsEnabled == true ? "More Obvious" : "General"
-        
-        // Call Firebase to generate hint using OpenAI
+        // Always get General hint first
         FirebaseService.shared.generateHint(
             for: correctPlayers,
             position: question.position,
             year: question.year,
             team: question.team,
-            hintLevel: hintLevel
+            hintLevel: "General"
         ) { [weak self] result in
             guard let self = self else { return }
             
             switch result {
             case .success(let hint):
-                // Split hint if it contains "More Obvious" additional info
-                if hintLevel == "More Obvious" {
-                    // More Obvious hints contain both general hint + initials/college
-                    let components = hint.components(separatedBy: "\n\n")
-                    if components.count > 1 {
-                        self.generalHint = components[0]
-                        self.moreObviousHint = components[1]
-                    } else {
-                        self.generalHint = hint
-                        self.moreObviousHint = ""
-                    }
-                } else {
-                    self.generalHint = hint
-                    self.moreObviousHint = ""
-                }
+                self.generalHint = hint
                 
             case .failure(let error):
                 print("❌ Error generating hint: \(error.localizedDescription)")
                 // Fallback to basic hint
                 self.generalHint = "Position: \(question.position)\nTeam: \(question.team)\nYear: \(question.year)"
-                self.moreObviousHint = ""
+            }
+        }
+    }
+    
+    func requestMoreObviousHint() {
+        guard let question = currentQuestion else { return }
+        hasRequestedMoreObviousHint = true
+        isLoadingMoreObviousHint = true
+        
+        // Populate correctPlayers if not already populated
+        if correctPlayers.isEmpty {
+            populateCorrectPlayersForDisplay(question: question)
+        }
+        
+        // Call Firebase to get More Obvious hint
+        FirebaseService.shared.generateHint(
+            for: correctPlayers,
+            position: question.position,
+            year: question.year,
+            team: question.team,
+            hintLevel: "More Obvious"
+        ) { [weak self] result in
+            guard let self = self else { return }
+            self.isLoadingMoreObviousHint = false
+            
+            switch result {
+            case .success(let hint):
+                // More Obvious hints contain both general hint + initials/college
+                let components = hint.components(separatedBy: "\n\n")
+                if components.count > 1 {
+                    // Use only the additional info (initials/college)
+                    self.moreObviousHint = components[1]
+                } else {
+                    // Fallback if format is different
+                    self.moreObviousHint = hint
+                }
+                
+            case .failure(let error):
+                print("❌ Error generating more obvious hint: \(error.localizedDescription)")
+                self.moreObviousHint = "Unable to load more obvious hint."
             }
         }
     }

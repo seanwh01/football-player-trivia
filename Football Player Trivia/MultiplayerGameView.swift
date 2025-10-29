@@ -51,7 +51,7 @@ struct MultiplayerGameView: View {
         }
         .sheet(isPresented: $viewModel.showHintSheet) {
             hintSheet
-                .presentationDetents([.medium, .large])
+                .presentationDetents([.fraction(0.6), .large])
                 .presentationDragIndicator(.visible)
         }
         .toolbar {
@@ -477,7 +477,33 @@ struct MultiplayerGameView: View {
                     }
                     .padding(.horizontal, 30)
                     
-                    // Additional Info (for More Obvious hints)
+                    // More Obvious Hint Button (if enabled and not yet requested)
+                    if multiplayerManager.gameSettings?.moreObviousHintsEnabled == true && !viewModel.hasRequestedMoreObviousHint {
+                        Button(action: {
+                            viewModel.requestMoreObviousHint()
+                        }) {
+                            HStack {
+                                if viewModel.isLoadingMoreObviousHint {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        .scaleEffect(0.8)
+                                    Text("Loading...")
+                                } else {
+                                    Text("Get More Obvious Hint")
+                                }
+                            }
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Color.orange.opacity(0.8))
+                            .cornerRadius(10)
+                        }
+                        .disabled(viewModel.isLoadingMoreObviousHint)
+                        .padding(.horizontal, 30)
+                    }
+                    
+                    // More Obvious Hint Display (after button clicked)
                     if !viewModel.moreObviousHint.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
                             Text(viewModel.moreObviousHint)
