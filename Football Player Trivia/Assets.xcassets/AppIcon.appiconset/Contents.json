@@ -1,7 +1,7 @@
 {
   "images" : [
     {
-      "filename" : "PigskinGeniusLogo.png",
+      "filename" : "PigskinLogo.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -13,7 +13,7 @@
           "value" : "dark"
         }
       ],
-      "filename" : "PigskinGeniusLogo 1.png",
+      "filename" : "PigskinLogo 1.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -25,7 +25,7 @@
           "value" : "tinted"
         }
       ],
-      "filename" : "PigskinGeniusLogo 2.png",
+      "filename" : "PigskinLogo 2.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"

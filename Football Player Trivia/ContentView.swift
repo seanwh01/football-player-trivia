@@ -19,7 +19,6 @@ struct ContentView: View {
     @State private var showGameChallengeAlert = false
     @State private var gameChallengeMessage = ""
     @State private var navigateToGame = false
-    @State private var showHeadToHeadSelection = false
     @State private var showNoFavoriteTeamAlert = false
     @State private var navigateToSettings = false
     @State private var showMultiplayerMenu = false
@@ -95,18 +94,18 @@ struct ContentView: View {
                         }
                         .disabled(isLoadingUpcomingGame)
                         
-                        // Head to Head Play Button
+                        // Multiplayer Head to Head Button
                         Button(action: {
-                            showHeadToHeadSelection = true
+                            showMultiplayerMenu = true
                         }) {
                             VStack(spacing: 6) {
                                 HStack {
                                     Image(systemName: "person.2.fill")
-                                    Text("Head to Head Play")
+                                    Text("Head to Head Trivia Game")
                                         .font(.title3)
                                         .fontWeight(.semibold)
                                 }
-                                Text("Choose any two teams for a custom matchup")
+                                Text("Play multiplayer trivia with nearby friends")
                                     .font(.caption)
                                     .foregroundColor(.white.opacity(0.9))
                                     .multilineTextAlignment(.center)
@@ -125,42 +124,12 @@ struct ContentView: View {
                             .shadow(color: .black.opacity(0.5), radius: 10, x: 0, y: 5)
                         }
                         
-                        // Multiplayer Head to Head Button
-                        Button(action: {
-                            showMultiplayerMenu = true
-                        }) {
-                            VStack(spacing: 6) {
-                                HStack {
-                                    Image(systemName: "iphone.radiowaves.left.and.right")
-                                    Text("Head to Head Trivia Game")
-                                        .font(.title3)
-                                        .fontWeight(.semibold)
-                                }
-                                Text("Play multiplayer trivia with nearby friends")
-                                    .font(.caption)
-                                    .foregroundColor(.white.opacity(0.9))
-                                    .multilineTextAlignment(.center)
-                            }
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [Color.purple, Color.purple.opacity(0.8)]),
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .cornerRadius(12)
-                            .shadow(color: .black.opacity(0.5), radius: 10, x: 0, y: 5)
-                        }
-                        
-                        // Standard Trivia Button
+                        // Single Player Trivia Game Button
                         NavigationLink(destination: TriviaGameView(settings: gameSettings)) {
                             VStack(spacing: 6) {
                                 HStack {
                                     Image(systemName: "brain.head.profile")
-                                    Text("Standard Trivia")
+                                    Text("Single Player Trivia Game")
                                         .font(.title3)
                                         .fontWeight(.semibold)
                                 }
@@ -232,12 +201,6 @@ struct ContentView: View {
             }
         } message: {
             Text(gameChallengeMessage)
-        }
-        .sheet(isPresented: $showHeadToHeadSelection) {
-            HeadToHeadSelectionView(
-                settings: gameSettings,
-                shouldNavigateToGame: $navigateToGame
-            )
         }
         .confirmationDialog("Multiplayer Mode", isPresented: $showMultiplayerMenu) {
             Button("Host Game") {
