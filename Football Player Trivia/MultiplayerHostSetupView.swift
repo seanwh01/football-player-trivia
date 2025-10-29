@@ -130,7 +130,7 @@ struct MultiplayerHostSetupView: View {
                                 // More Obvious Hints Toggle (shown only if hints enabled)
                                 if hintsEnabled {
                                     Toggle(isOn: $moreObviousHintsEnabled) {
-                                        Text("Include More Obvious Hints")
+                                        Text("Ask for More Obvious Hint")
                                             .font(.subheadline)
                                             .foregroundColor(.white.opacity(0.9))
                                             .padding(.leading, 20)

@@ -51,7 +51,7 @@ struct MultiplayerGameView: View {
         }
         .sheet(isPresented: $viewModel.showHintSheet) {
             hintSheet
-                .presentationDetents([.height(400), .large])
+                .presentationDetents([.height(500), .large])
                 .presentationDragIndicator(.visible)
         }
         .toolbar {
@@ -458,83 +458,90 @@ struct MultiplayerGameView: View {
             Color.black.opacity(0.95)
                 .ignoresSafeArea()
             
-            VStack(spacing: 24) {
-                    Text("Hint")
-                        .font(.system(size: 32, weight: .bold))
-                        .foregroundColor(.white)
-                        .padding(.top, 20)
-                    
-                    // General Hint
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text(viewModel.generalHint)
-                            .font(.body)
-                            .foregroundColor(.white)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding()
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color.white.opacity(0.1))
-                            .cornerRadius(10)
-                    }
-                    .padding(.horizontal, 30)
-                    
-                    // More Obvious Hint Button (if enabled and not yet requested)
-                    if multiplayerManager.gameSettings?.moreObviousHintsEnabled == true && !viewModel.hasRequestedMoreObviousHint {
-                        Button(action: {
-                            viewModel.requestMoreObviousHint()
-                        }) {
-                            HStack {
-                                if viewModel.isLoadingMoreObviousHint {
-                                    ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                        .scaleEffect(0.8)
-                                    Text("Loading...")
-                                } else {
-                                    Text("Get More Obvious Hint")
-                                }
-                            }
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(Color.orange.opacity(0.8))
-                            .cornerRadius(10)
-                        }
-                        .disabled(viewModel.isLoadingMoreObviousHint)
-                        .padding(.horizontal, 30)
-                    }
-                    
-                    // More Obvious Hint Display (after button clicked)
-                    if !viewModel.moreObviousHint.isEmpty {
+            VStack(spacing: 0) {
+                // Fixed Header
+                Text("Hint")
+                    .font(.system(size: 32, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(.top, 20)
+                    .padding(.bottom, 16)
+                
+                // Scrollable Content
+                ScrollView {
+                    VStack(spacing: 20) {
+                        // General Hint
                         VStack(alignment: .leading, spacing: 12) {
-                            Text(viewModel.moreObviousHint)
+                            Text(viewModel.generalHint)
                                 .font(.body)
                                 .foregroundColor(.white)
                                 .fixedSize(horizontal: false, vertical: true)
                                 .padding()
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(Color.orange.opacity(0.2))
+                                .background(Color.white.opacity(0.1))
                                 .cornerRadius(10)
                         }
                         .padding(.horizontal, 30)
+                        
+                        // More Obvious Hint Button (if enabled and not yet requested)
+                        if multiplayerManager.gameSettings?.moreObviousHintsEnabled == true && !viewModel.hasRequestedMoreObviousHint {
+                            Button(action: {
+                                viewModel.requestMoreObviousHint()
+                            }) {
+                                HStack {
+                                    if viewModel.isLoadingMoreObviousHint {
+                                        ProgressView()
+                                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                            .scaleEffect(0.8)
+                                        Text("Loading...")
+                                    } else {
+                                        Text("Get More Obvious Hint")
+                                    }
+                                }
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(Color.orange.opacity(0.8))
+                                .cornerRadius(10)
+                            }
+                            .disabled(viewModel.isLoadingMoreObviousHint)
+                            .padding(.horizontal, 30)
+                        }
+                        
+                        // More Obvious Hint Display (after button clicked)
+                        if !viewModel.moreObviousHint.isEmpty {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text(viewModel.moreObviousHint)
+                                    .font(.body)
+                                    .foregroundColor(.white)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .padding()
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .background(Color.orange.opacity(0.2))
+                                    .cornerRadius(10)
+                            }
+                            .padding(.horizontal, 30)
+                        }
                     }
-                    
-                    Spacer()
-                    
-                    // Close Button
-                    Button(action: {
-                        viewModel.showHintSheet = false
-                    }) {
-                        Text("Got It!")
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(Color.green)
-                            .cornerRadius(12)
-                    }
-                    .padding(.horizontal, 30)
-                    .padding(.bottom, 40)
+                    .padding(.bottom, 20)
                 }
+                
+                // Fixed Footer Button
+                Button(action: {
+                    viewModel.showHintSheet = false
+                }) {
+                    Text("Got It!")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Color.green)
+                        .cornerRadius(12)
+                }
+                .padding(.horizontal, 30)
+                .padding(.top, 16)
+                .padding(.bottom, 40)
+            }
         }
     }
     
