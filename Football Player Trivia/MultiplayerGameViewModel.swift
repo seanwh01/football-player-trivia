@@ -387,7 +387,7 @@ class MultiplayerGameViewModel: ObservableObject {
     // MARK: - Timer Management
     
     private func startQuestionTimer() {
-        timeRemaining = 20.0
+        timeRemaining = maxTimeToAnswer
         isTimerRunning = true
         answerStartTime = Date()
         
@@ -647,6 +647,11 @@ class MultiplayerGameViewModel: ObservableObject {
     func requestHint() {
         guard let question = currentQuestion else { return }
         hasUsedHint = true
+        
+        // Populate correctPlayers if not already populated (needed for more obvious hint)
+        if correctPlayers.isEmpty {
+            populateCorrectPlayersForDisplay(question: question)
+        }
         
         // Generate general hint
         generalHint = "Position: \(question.position)\nTeam: \(question.team)\nYear: \(question.year)"

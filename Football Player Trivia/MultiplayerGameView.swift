@@ -248,16 +248,13 @@ struct MultiplayerGameView: View {
                             Button(action: {
                                 viewModel.requestHint()
                             }) {
-                                HStack {
-                                    Image(systemName: "lightbulb.fill")
-                                    Text("Get Hint")
-                                }
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 24)
-                                .padding(.vertical, 12)
-                                .background(Color.orange)
-                                .cornerRadius(10)
+                                Text("Get Hint")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 24)
+                                    .padding(.vertical, 12)
+                                    .background(Color.orange)
+                                    .cornerRadius(10)
                             }
                             .padding(.top, 8)
                         }
@@ -461,15 +458,10 @@ struct MultiplayerGameView: View {
                     .ignoresSafeArea()
                 
                 VStack(spacing: 24) {
-                    // Lightbulb icon
-                    Image(systemName: "lightbulb.fill")
-                        .font(.system(size: 60))
-                        .foregroundColor(.orange)
-                        .padding(.top, 20)
-                    
                     Text("Hint")
                         .font(.system(size: 32, weight: .bold))
                         .foregroundColor(.white)
+                        .padding(.top, 20)
                     
                     // General Hint
                     VStack(alignment: .leading, spacing: 12) {
