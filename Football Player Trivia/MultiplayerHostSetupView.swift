@@ -86,6 +86,21 @@ struct MultiplayerHostSetupView: View {
                                         }
                                     }
                                 }
+                                
+                                // Available Questions Info
+                                if !selectedPositions.isEmpty && !selectedTeams.isEmpty {
+                                    let available = availableQuestionsCount
+                                    let isValid = available >= questionCount
+                                    HStack(spacing: 4) {
+                                        Image(systemName: isValid ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                                            .foregroundColor(isValid ? .green : .orange)
+                                            .font(.caption)
+                                        Text("\(available) unique questions available")
+                                            .font(.caption)
+                                            .foregroundColor(isValid ? .white.opacity(0.7) : .orange)
+                                    }
+                                    .padding(.top, 4)
+                                }
                             }
                             
                             // Time to Answer
@@ -430,6 +445,13 @@ struct MultiplayerHostSetupView: View {
         return hasMultiplePositions || hasMultipleTeams || hasMultipleYears
     }
     
+    private var availableQuestionsCount: Int {
+        let yearCount = yearTo - yearFrom + 1
+        let positionCount = max(selectedPositions.count, 1)
+        let teamCount = max(selectedTeams.count, 1)
+        return yearCount * positionCount * teamCount
+    }
+    
     private var canStartHosting: Bool {
         !hostName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
         !selectedPositions.isEmpty &&
@@ -440,6 +462,33 @@ struct MultiplayerHostSetupView: View {
     // MARK: - Actions
     
     private func startHosting() {
+        // Validate that there are enough unique questions available
+        let yearCount = yearTo - yearFrom + 1
+        let positionCount = selectedPositions.count
+        let teamCount = selectedTeams.count
+        let availableQuestions = yearCount * positionCount * teamCount
+        
+        if availableQuestions < questionCount {
+            errorMessage = """
+            Not enough unique questions available!
+            
+            Current parameters allow for \(availableQuestions) unique questions:
+            • Years: \(yearCount) (\(yearFrom)-\(yearTo))
+            • Positions: \(positionCount)
+            • Teams: \(teamCount)
+            
+            You need at least \(questionCount) questions.
+            
+            Please either:
+            • Reduce number of questions to \(availableQuestions) or less
+            • Expand year range
+            • Select more positions
+            • Select more teams
+            """
+            showError = true
+            return
+        }
+        
         let gameSettings = MultiplayerGameSettings(
             positions: Array(selectedPositions),
             teams: Array(selectedTeams),
