@@ -12,6 +12,7 @@ import AdSupport
 
 struct ContentView: View {
     @StateObject private var gameSettings = GameSettings()
+    @StateObject private var adManager = AdMobManager.shared
     @State private var audioPlayer: AVAudioPlayer?
     @State private var hasPlayedSound = false
     @State private var hasResetChallenge = false
@@ -24,6 +25,7 @@ struct ContentView: View {
     @State private var showMultiplayerMenu = false
     @State private var showMultiplayerHost = false
     @State private var showMultiplayerJoin = false
+    @State private var bannerAdRefreshTrigger: Int = 0
     
     var body: some View {
         NavigationView {
@@ -153,7 +155,14 @@ struct ContentView: View {
                         }
                     }
                     .padding(.horizontal, 30)
-                    .padding(.bottom, 50)
+                    .padding(.bottom, 10)
+                    
+                    // Banner Ad at bottom
+                    BannerAdContainer(
+                        adUnitID: adManager.getBannerAdUnitID(),
+                        refreshTrigger: $bannerAdRefreshTrigger
+                    )
+                    .padding(.bottom, 5)
                 }
                 
                 // Hidden NavigationLinks for programmatic navigation
@@ -190,6 +199,9 @@ struct ContentView: View {
                 requestTrackingPermission()
                 playWhistleSoundOnce()
                 resetChallengeState()
+                
+                // Trigger banner ad display
+                bannerAdRefreshTrigger = 1
             }
         }
         .navigationViewStyle(.stack)

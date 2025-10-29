@@ -34,6 +34,7 @@ struct TriviaGameView: View {
     @State private var isReady: Bool = false
     @State private var pendingHint: (year: Int, hintLevel: String)? = nil
     @State private var lastHintContext: (year: Int, position: String, team: String)? = nil
+    @State private var spinCount: Int = 0 // Track spins for interstitial ads
     
     // Challenge mode tracking (for Upcoming Game Challenge)
     @State private var teamScores: [String: Int] = [:]
@@ -189,6 +190,14 @@ struct TriviaGameView: View {
                         teamLocked = true
                         bannerAdRefreshTrigger += 1
                         autoSelectSingleValues()
+                        
+                        // Show interstitial ad every 8 spins in single player mode
+                        if !isInChallengeMode {
+                            spinCount += 1
+                            if spinCount % 8 == 0 {
+                                showInterstitialAd()
+                            }
+                        }
                     },
                     hapticsEnabled: settings.spinHapticsEnabled
                 )
@@ -409,9 +418,15 @@ struct TriviaGameView: View {
                 title: Text("Result"),
                 message: Text(resultMessage),
                 dismissButton: .default(Text("Next Question")) {
-                    // Check if game over after final question
+                    // Check if game over after final question in challenge mode
                     if isInChallengeMode && currentQuestionNumber >= totalQuestions {
-                        showGameOver = true
+                        // Show interstitial ad before game over screen
+                        showInterstitialAd()
+                        
+                        // Delay showing game over to allow ad to be dismissed
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            showGameOver = true
+                        }
                         return
                     }
                     
@@ -747,6 +762,16 @@ struct TriviaGameView: View {
         }
     }
     
+    private func showInterstitialAd() {
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let rootViewController = windowScene.windows.first?.rootViewController else {
+            return
+        }
+        
+        // Try to show interstitial ad
+        _ = adManager.showInterstitialAd(from: rootViewController)
+    }
+    
     private func getHint() {
         guard let yearInt = Int(selectedYear) else { return }
         // Save context for potential "More Obvious" request
@@ -817,7 +842,7 @@ struct TriviaGameView: View {
         // Increment hint count
         settings.sessionHintCount += 1
         
-        // Check if we should show an interstitial ad (every 5th hint)
+        // Check if we should show an interstitial ad (every 3rd hint)
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
            let rootViewController = windowScene.windows.first?.rootViewController {
             
