@@ -91,6 +91,26 @@ class AdMobManager: NSObject, ObservableObject {
         
         return true
     }
+    
+    /// Show interstitial ad immediately (without hint count check)
+    func showInterstitialAd(from viewController: UIViewController) -> Bool {
+        // Check if ad is ready
+        guard let interstitial = interstitialAd, isInterstitialReady else {
+            print("⚠️ Interstitial ad not ready yet")
+            // Load next ad for next time
+            loadInterstitialAd()
+            return false
+        }
+        
+        // Show the ad
+        print("🎬 Showing interstitial ad")
+        interstitial.present(from: viewController)
+        
+        // Mark as not ready and load next ad
+        isInterstitialReady = false
+        
+        return true
+    }
 }
 
 // MARK: - FullScreenContentDelegate
