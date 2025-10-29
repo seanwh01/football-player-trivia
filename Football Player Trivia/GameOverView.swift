@@ -246,7 +246,6 @@ struct GameOverView: View {
                 (team: "KC", position: "Running Back"),
                 (team: "WAS", position: "Defensive Back")
             ],
-            questionsServed: ["KC": 5, "WAS": 3],
             onClose: {},
             onPlayAgain: {}
         )
