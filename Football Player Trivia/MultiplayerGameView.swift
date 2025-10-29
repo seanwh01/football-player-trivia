@@ -10,6 +10,7 @@ import SwiftUI
 struct MultiplayerGameView: View {
     @ObservedObject var multiplayerManager: MultiplayerManager
     @StateObject private var viewModel: MultiplayerGameViewModel
+    @StateObject private var adManager = AdMobManager.shared
     @Environment(\.presentationMode) var presentationMode
     @Binding var isPresented: Bool
     @FocusState private var isTextFieldFocused: Bool
@@ -439,7 +440,16 @@ struct MultiplayerGameView: View {
             Spacer()
             
             Button(action: {
-                leaveGame()
+                // Show interstitial ad before leaving
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                   let rootViewController = windowScene.windows.first?.rootViewController {
+                    _ = adManager.showInterstitialAd(from: rootViewController)
+                }
+                
+                // Small delay to allow ad to show, then leave
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    leaveGame()
+                }
             }) {
                 Text("Back to Menu")
                     .font(.system(size: 20, weight: .bold))
