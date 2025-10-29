@@ -51,7 +51,7 @@ struct MultiplayerGameView: View {
         }
         .sheet(isPresented: $viewModel.showHintSheet) {
             hintSheet
-                .presentationDetents([.fraction(0.6), .large])
+                .presentationDetents([.height(400), .large])
                 .presentationDragIndicator(.visible)
         }
         .toolbar {
@@ -469,11 +469,11 @@ struct MultiplayerGameView: View {
                         Text(viewModel.generalHint)
                             .font(.body)
                             .foregroundColor(.white)
+                            .fixedSize(horizontal: false, vertical: true)
                             .padding()
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .background(Color.white.opacity(0.1))
                             .cornerRadius(10)
-                            .multilineTextAlignment(.leading)
                     }
                     .padding(.horizontal, 30)
                     
@@ -509,11 +509,11 @@ struct MultiplayerGameView: View {
                             Text(viewModel.moreObviousHint)
                                 .font(.body)
                                 .foregroundColor(.white)
+                                .fixedSize(horizontal: false, vertical: true)
                                 .padding()
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .background(Color.orange.opacity(0.2))
                                 .cornerRadius(10)
-                                .multilineTextAlignment(.leading)
                         }
                         .padding(.horizontal, 30)
                     }

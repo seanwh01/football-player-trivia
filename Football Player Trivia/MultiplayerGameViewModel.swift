@@ -413,6 +413,7 @@ class MultiplayerGameViewModel: ObservableObject {
         isTimerRunning = false
     }
     
+    @MainActor
     private func handleTimeExpired() {
         stopQuestionTimer()
         
@@ -653,17 +654,21 @@ class MultiplayerGameViewModel: ObservableObject {
     }
     
     func requestHint() {
-        guard let question = currentQuestion else { return }
+        guard let question = currentQuestion, !hasUsedHint else { return }
         hasUsedHint = true
+        
+        print("🔍 DEBUG: requestHint() called - Question: \(question.position) \(question.team) \(question.year)")
         
         // Populate correctPlayers if not already populated
         if correctPlayers.isEmpty {
             populateCorrectPlayersForDisplay(question: question)
         }
         
-        // Set loading state
+        // Reset all hint state before opening sheet
         generalHint = "Loading hint..."
         moreObviousHint = ""
+        hasRequestedMoreObviousHint = false
+        isLoadingMoreObviousHint = false
         showHintSheet = true
         
         // Always get General hint first
@@ -678,6 +683,7 @@ class MultiplayerGameViewModel: ObservableObject {
             
             switch result {
             case .success(let hint):
+                print("✅ DEBUG: General hint received: \(hint.prefix(50))...")
                 self.generalHint = hint
                 
             case .failure(let error):
@@ -689,7 +695,12 @@ class MultiplayerGameViewModel: ObservableObject {
     }
     
     func requestMoreObviousHint() {
-        guard let question = currentQuestion else { return }
+        guard let question = currentQuestion, !hasRequestedMoreObviousHint else { 
+            print("⚠️ DEBUG: requestMoreObviousHint blocked - already requested or no question")
+            return
+        }
+        
+        print("🔍 DEBUG: requestMoreObviousHint() called - Question: \(question.position) \(question.team) \(question.year)")
         hasRequestedMoreObviousHint = true
         isLoadingMoreObviousHint = true
         
@@ -711,13 +722,17 @@ class MultiplayerGameViewModel: ObservableObject {
             
             switch result {
             case .success(let hint):
+                print("✅ DEBUG: More Obvious hint received: \(hint.prefix(100))...")
                 // More Obvious hints contain both general hint + initials/college
                 let components = hint.components(separatedBy: "\n\n")
+                print("🔍 DEBUG: Components count: \(components.count)")
                 if components.count > 1 {
                     // Use only the additional info (initials/college)
+                    print("🔍 DEBUG: Setting moreObviousHint to component[1]: \(components[1])")
                     self.moreObviousHint = components[1]
                 } else {
                     // Fallback if format is different
+                    print("⚠️ DEBUG: Using full hint as moreObviousHint")
                     self.moreObviousHint = hint
                 }
                 
