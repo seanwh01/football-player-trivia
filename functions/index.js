@@ -32,7 +32,7 @@ const CONFIG = {
   MAX_HINTS_PER_USER_PER_DAY: 2000, // Generous for users, blocks bots
   MAX_VALIDATIONS_PER_USER_PER_DAY: 5000, // High limit for answer submissions
   CACHE_ENABLED: true,  // ENABLED for production - 30-day cache for cost savings
-  CACHE_VERSION: 'v4_nicknames_test',  // Changed to clear cache for testing
+  CACHE_VERSION: 'v5_fixed_initials',  // Fixed: initials now correctly use first+last (AB not AJ for AJ Brown)
   COST_PER_VALIDATION: 0.0005,
   COST_PER_HINT: 0.0003
 };
@@ -822,6 +822,13 @@ ${isMoreObvious ? `\n\nIMPORTANT: End your hint with a new line, then add exactl
         count = 'three';
       }
       
+      // Calculate initials for all players
+      const playerInitials = data.correctPlayers.map(p => {
+        const firstInitial = p.firstName.charAt(0);
+        const lastInitial = p.lastName.charAt(0);
+        return `${p.firstName} ${p.lastName}: ${firstInitial}${lastInitial}`;
+      }).join(', ');
+      
       prompt = `You are an NFL trivia expert. The user is trying to guess one of the top ${count} ${positionLabel} by snaps played with these details:
 - Team: ${data.team}
 - Year: ${data.year}
@@ -835,7 +842,7 @@ Do NOT use phonetics, rhymes, or wordplay as hints.
 Do NOT reveal any names directly.
 Keep the hint to 1-2 sentences.
 Focus on memorable achievements, statistics, or nicknames from around that year.
-${isMoreObvious ? '\n\nIMPORTANT: After your hint, add a new line and then add exactly this format: "This player\'s initials are XX and they played college football at [college name]." Replace XX with the initials of the player you chose to hint about, and research/include the actual college name.' : ''}`;
+${isMoreObvious ? `\n\nIMPORTANT: After your hint, add a new line and then add exactly this format: "This player's initials are XX and they played college football at [college name]." Use the CORRECT initials for whichever player you chose to hint about. The initials are: ${playerInitials}. For example, if the player's name is "AJ Brown", the initials are AB (first letter of first name + first letter of last name). Research and include the actual college name.` : ''}`;
     }
     
     const completion = await openai.chat.completions.create({
