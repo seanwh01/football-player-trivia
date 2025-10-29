@@ -12,6 +12,7 @@ struct MultiplayerGameView: View {
     @StateObject private var viewModel: MultiplayerGameViewModel
     @Environment(\.presentationMode) var presentationMode
     @Binding var isPresented: Bool
+    @FocusState private var isTextFieldFocused: Bool
     
     init(multiplayerManager: MultiplayerManager, isPresented: Binding<Bool>) {
         self.multiplayerManager = multiplayerManager
@@ -230,6 +231,15 @@ struct MultiplayerGameView: View {
                             .autocapitalization(.words)
                             .disabled(viewModel.hasAnswered || !viewModel.isTimerRunning)
                             .padding(.horizontal, 40)
+                            .focused($isTextFieldFocused)
+                            .onChange(of: viewModel.currentQuestion) { newQuestion in
+                                if newQuestion != nil && !viewModel.hasAnswered {
+                                    // Auto-focus when new question appears
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                        isTextFieldFocused = true
+                                    }
+                                }
+                            }
                         
                         Button(action: {
                             viewModel.submitAnswer(viewModel.userAnswer)

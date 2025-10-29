@@ -211,6 +211,15 @@ struct TriviaGameView: View {
                         .disabled(!isPlayerInputActive)
                         .opacity(isPlayerInputActive ? 1.0 : 0.5)
                         .focused($isTextFieldFocused)
+                        .onChange(of: isPlayerInputActive) { isActive in
+                            if isActive {
+                                // Auto-focus text field when it becomes active
+                                // Small delay ensures wheel animation completes
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                    isTextFieldFocused = true
+                                }
+                            }
+                        }
                     
                     HStack(spacing: 15) {
                         Button(action: checkAnswer) {
