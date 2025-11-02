@@ -857,7 +857,7 @@ struct TriviaGameView: View {
         }
         
         // Format the correct answer(s)
-        let playerNames = players.map { $0.name }.joined(separator: ", ")
+        let playerNames = players.map { $0.playerName }.joined(separator: ", ")
         self.resultMessage = "The correct answer:\n\n✨ \(playerNames) ✨"
         self.isCorrect = false
         
