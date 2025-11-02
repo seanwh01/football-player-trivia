@@ -373,7 +373,52 @@ exports.validateAnswer = functions.https.onCall(async (data, context) => {
       };
     }
     
-    // 2. Check cache - stores full validation result (embeddings + GPT facts)
+    // 2. Handle "I Don't Know" button (empty userAnswer)
+    if (!data.userAnswer || data.userAnswer.trim() === '') {
+      console.log('Empty answer detected - "I Don\'t Know" button clicked');
+      
+      const correctNames = data.correctPlayers.map(p => `${p.firstName} ${p.lastName}`).join(', ');
+      
+      // Generate player facts with GPT
+      const prompt = `You are an NFL trivia judge and storyteller.
+
+The user clicked "I Don't Know" and wants to learn the answer.
+The correct answer is: ${correctNames}
+Position: ${data.position}, Team: ${data.team}, Year: ${data.year}
+
+Start with "💭 I see you don't know the answer. It was ${correctNames}!" on its own line, then provide 2-3 interesting facts about ${correctNames}, including personal info (birthplace, college, interesting backstory) and NFL achievements from around ${data.year}. Make it engaging and educational! Keep it concise (2-3 sentences total after the first line).`;
+
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a knowledgeable and enthusiastic NFL trivia host who makes learning about players fun and interesting. Generate engaging facts and stories about NFL players. Keep responses concise (2-3 sentences after the emoji line).'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        max_tokens: 200,
+        temperature: 0.7
+      });
+      
+      const message = completion.choices[0].message.content.trim();
+      
+      const result = {
+        isCorrect: false,
+        message
+      };
+      
+      incrementSpending(CONFIG.COST_PER_VALIDATION);
+      incrementRateLimit(userId, 'validation');
+      
+      console.log('Validation complete: I Don\'t Know - player facts provided');
+      return result;
+    }
+    
+    // 3. Check cache - stores full validation result (embeddings + GPT facts)
     if (CONFIG.CACHE_ENABLED) {
       const cacheKey = getValidationCacheKey(data);
       const cached = cache.get(cacheKey);
@@ -384,7 +429,7 @@ exports.validateAnswer = functions.https.onCall(async (data, context) => {
       }
     }
     
-    // 3. Check budget
+    // 4. Check budget
     if (!checkBudget(CONFIG.COST_PER_VALIDATION)) {
       console.warn('Budget exceeded, using fallback');
       return {
@@ -394,7 +439,7 @@ exports.validateAnswer = functions.https.onCall(async (data, context) => {
       };
     }
     
-    // 4. First try phonetic matching (FREE - no API call!)
+    // 5. First try phonetic matching (FREE - no API call!)
     const phoneticResult = checkPhoneticMatch(data.userAnswer, data.correctPlayers);
     
     if (phoneticResult.isMatch) {
@@ -455,7 +500,7 @@ Start with "✅ Correct! (The spelling is ${matchedName})" on its own line, then
       return result;
     }
     
-    // 5. Try Levenshtein distance check (FREE - catches typos like "Mahones" vs "Mahomes")
+    // 6. Try Levenshtein distance check (FREE - catches typos like "Mahones" vs "Mahomes")
     const levenshteinResult = checkLevenshteinMatch(data.userAnswer, data.correctPlayers, 2);
     
     if (levenshteinResult.isMatch) {
@@ -516,7 +561,7 @@ Start with "✅ Close enough! The correct spelling is ${matchedName}." on its ow
       return result;
     }
     
-    // 6. If all free checks fail, use embedding similarity for validation
+    // 7. If all free checks fail, use embedding similarity for validation
     console.log('No phonetic or Levenshtein match, using embedding similarity...');
     const similarityResult = await checkNameSimilarity(data.userAnswer, data.correctPlayers, 0.78);
     

@@ -272,12 +272,20 @@ struct TriviaGameView: View {
                         
                         // "I don't know" button - get answer with AI facts
                         Button(action: skipToAnswer) {
-                            Image("IDontKnowButton")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(height: 34)
-                                .cornerRadius(8)
-                                .opacity(isPlayerInputActive ? 1.0 : 0.5)
+                            ZStack {
+                                Image("IDontKnowButton")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(height: 34)
+                                    .cornerRadius(8)
+                                    .opacity(isValidatingAnswer ? 0.3 : (isPlayerInputActive ? 1.0 : 0.5))
+                                
+                                if isValidatingAnswer {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        .scaleEffect(0.8)
+                                }
+                            }
                         }
                         .disabled(!isPlayerInputActive || isValidatingAnswer)
                     }
