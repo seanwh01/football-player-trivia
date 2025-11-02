@@ -18,6 +18,8 @@ struct FootballTriviaApp: App {
         FirebaseApp.configure()
         print("✅ Firebase initialized successfully")
         
+        // Initialize AdMob SDK (Swift API):
+                MobileAds.shared.start()
         // Delay AdMob initialization to avoid blocking app launch
         // AdMob will start when first ad is loaded (lazy initialization)
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {

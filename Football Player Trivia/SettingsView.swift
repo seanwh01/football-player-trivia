@@ -25,6 +25,24 @@ struct SettingsView: View {
     
     @StateObject private var adManager = AdMobManager.shared
     
+    // Computed property for last download date display
+    private var lastDownloadDateText: String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateStyle = .medium
+        dateFormatter.timeStyle = .short
+        
+        if let downloadDate = settings.lastDataDownloadDate {
+            return "Last updated: \(dateFormatter.string(from: downloadDate))"
+        } else {
+            // Fallback to app install date
+            if let installDate = getAppInstallDate() {
+                return "Data from install: \(dateFormatter.string(from: installDate))"
+            } else {
+                return "Data not yet downloaded"
+            }
+        }
+    }
+    
     var body: some View {
         ZStack {
             // Background - Football field image
@@ -266,6 +284,13 @@ struct SettingsView: View {
                             .font(.caption)
                             .foregroundColor(.white.opacity(0.8))
                             .padding(.horizontal, 20)
+                        
+                        // Display last download date
+                        Text(lastDownloadDateText)
+                            .font(.caption2)
+                            .foregroundColor(.white.opacity(0.6))
+                            .padding(.horizontal, 20)
+                            .padding(.top, 4)
                     }
                     
                     // Teams Section
@@ -454,6 +479,9 @@ struct SettingsView: View {
                     self.updateMessage = message
                     self.showUpdateAlert = true
                     
+                    // Update last download date
+                    self.settings.lastDataDownloadDate = Date()
+                    
                     // Reload database
                     _ = DatabaseManager.shared
                     
@@ -507,6 +535,21 @@ struct SettingsView: View {
                         .stroke(settings.selectedTeams.contains(team) ? Color.orange : Color.white.opacity(0.3), lineWidth: settings.selectedTeams.contains(team) ? 2 : 1)
                 )
         }
+    }
+    
+    // MARK: - Helper Functions
+    
+    /// Get the app's install date from the documents directory creation date
+    private func getAppInstallDate() -> Date? {
+        if let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+            do {
+                let attributes = try FileManager.default.attributesOfItem(atPath: documentsURL.path)
+                return attributes[.creationDate] as? Date
+            } catch {
+                print("Error getting install date: \(error)")
+            }
+        }
+        return nil
     }
 }
 

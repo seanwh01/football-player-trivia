@@ -18,6 +18,7 @@ class GameSettings: ObservableObject {
     private let hintLevelKey = "hintLevel"
     private let soundEnabledKey = "soundEnabled"
     private let favoriteTeamKey = "favoriteTeam"
+    private let lastDataDownloadDateKey = "lastDataDownloadDate"
     
     private var cancellables = Set<AnyCancellable>()
     
@@ -46,6 +47,8 @@ class GameSettings: ObservableObject {
     
     @Published var selectedTeams: Set<String> = []
     @Published var favoriteTeam: String = ""
+    
+    @Published var lastDataDownloadDate: Date?
     
     let allPositions = [
         "Quarterback",
@@ -133,6 +136,10 @@ class GameSettings: ObservableObject {
             favoriteTeam = savedFavoriteTeam
         }
         
+        if let savedDownloadDate = UserDefaults.standard.object(forKey: lastDataDownloadDateKey) as? Date {
+            lastDataDownloadDate = savedDownloadDate
+        }
+        
         print("✅ Settings loaded from UserDefaults")
     }
     
@@ -190,6 +197,13 @@ class GameSettings: ObservableObject {
             .dropFirst()
             .sink { [weak self] team in
                 UserDefaults.standard.set(team, forKey: self?.favoriteTeamKey ?? "")
+            }
+            .store(in: &cancellables)
+        
+        $lastDataDownloadDate
+            .dropFirst()
+            .sink { [weak self] date in
+                UserDefaults.standard.set(date, forKey: self?.lastDataDownloadDateKey ?? "")
             }
             .store(in: &cancellables)
     }

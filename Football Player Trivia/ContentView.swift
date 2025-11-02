@@ -10,6 +10,9 @@ import AVFoundation
 import AppTrackingTransparency
 import AdSupport
 
+
+
+
 struct ContentView: View {
     @StateObject private var gameSettings = GameSettings()
     @StateObject private var adManager = AdMobManager.shared
