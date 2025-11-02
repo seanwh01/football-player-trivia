@@ -231,7 +231,7 @@ struct TriviaGameView: View {
                             }
                         }
                     
-                    HStack(spacing: 15) {
+                    HStack(spacing: 12) {
                         Button(action: checkAnswer) {
                             HStack(spacing: 5) {
                                 if isValidatingAnswer {
@@ -244,7 +244,7 @@ struct TriviaGameView: View {
                                     .fontWeight(.semibold)
                                     .foregroundColor(.white)
                             }
-                            .padding(.horizontal, 25)
+                            .padding(.horizontal, 20)
                             .padding(.vertical, 10)
                             .background(isPlayerInputActive ? Color.orange : Color.gray)
                             .cornerRadius(8)
@@ -263,12 +263,29 @@ struct TriviaGameView: View {
                                     .fontWeight(.semibold)
                                     .foregroundColor(.white)
                             }
-                            .padding(.horizontal, 25)
+                            .padding(.horizontal, 20)
                             .padding(.vertical, 10)
                             .background(isPlayerInputActive ? Color.orange : Color.gray)
                             .cornerRadius(8)
                         }
                         .disabled(!isPlayerInputActive || isLoadingHint)
+                        
+                        // "I don't know" button - skip to answer
+                        Button(action: skipToAnswer) {
+                            HStack(spacing: 5) {
+                                Image(systemName: "sparkles")
+                                    .foregroundColor(.white)
+                                Text("I Don't Know")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.white)
+                            }
+                            .padding(.horizontal, 15)
+                            .padding(.vertical, 10)
+                            .background(isPlayerInputActive ? Color.pink : Color.gray)
+                            .cornerRadius(8)
+                        }
+                        .disabled(!isPlayerInputActive || isValidatingAnswer)
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -784,6 +801,71 @@ struct TriviaGameView: View {
         // Save context for potential "More Obvious" request
         lastHintContext = (year: yearInt, position: selectedPosition, team: selectedTeam)
         generateHint(year: yearInt)
+    }
+    
+    private func skipToAnswer() {
+        guard let yearInt = Int(selectedYear) else { return }
+        
+        isTextFieldFocused = false
+        
+        // Get correct players from database based on position type
+        let players: [Player]
+        let singlePlayerPositions = ["Quarterback", "Tight End", "Placekicker"]
+        
+        if singlePlayerPositions.contains(selectedPosition) {
+            // Get top 1 player for single-player positions
+            let snapType = selectedPosition == "Placekicker" ? "special_teams" : "offense"
+            if let topPlayer = DatabaseManager.shared.getTopPlayerAtPosition(
+                position: selectedPosition,
+                year: yearInt,
+                team: selectedTeam,
+                snapType: snapType
+            ) {
+                players = [topPlayer]
+            } else {
+                players = []
+            }
+        } else {
+            // Get top N players for multi-player positions
+            var limit: Int
+            switch selectedPosition {
+            case "Offensive Linemen":
+                limit = 5
+            case "Defensive Back":
+                limit = 4
+            case "Wide Receiver", "Linebacker", "Defensive Linemen":
+                limit = 3
+            default: // Running Back
+                limit = 2
+            }
+            
+            let snapType = ["Linebacker", "Defensive Back", "Defensive Linemen"].contains(selectedPosition) ? "defense" : "offense"
+            players = DatabaseManager.shared.getTopPlayersAtPosition(
+                position: selectedPosition,
+                year: yearInt,
+                team: selectedTeam,
+                limit: limit,
+                snapType: snapType
+            )
+        }
+        
+        guard !players.isEmpty else {
+            self.resultMessage = "❌ No player data found for this selection."
+            self.isCorrect = false
+            self.activeAlert = .result
+            return
+        }
+        
+        // Format the correct answer(s)
+        let playerNames = players.map { $0.name }.joined(separator: ", ")
+        self.resultMessage = "The correct answer:\n\n✨ \(playerNames) ✨"
+        self.isCorrect = false
+        
+        // Increment session total but not correct count
+        self.settings.sessionTotal += 1
+        
+        // Show result
+        self.activeAlert = .result
     }
     
     private func getMoreObviousHint() {
