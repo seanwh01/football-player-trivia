@@ -276,7 +276,7 @@ struct TriviaGameView: View {
                                 Image("IDontKnowButton")
                                     .resizable()
                                     .scaledToFit()
-                                    .frame(height: 34)
+                                    .frame(width: 120, height: 38)
                                     .cornerRadius(8)
                                     .opacity(isValidatingAnswer ? 0.3 : (isPlayerInputActive ? 1.0 : 0.5))
                                 
