@@ -48,6 +48,12 @@ class MultiplayerManager: NSObject, ObservableObject {
     var onLeaderboardUpdate: (([LeaderboardEntry]) -> Void)?
     var onHostDisconnected: (() -> Void)?
     
+    // Host-authoritative callbacks
+    var onRawAnswerReceived: ((MCPeerID, String, TimeInterval) -> Void)?
+    var onValidationResultReceived: ((Bool, String, Int) -> Void)?
+    var onHintRequestReceived: ((MCPeerID, String) -> Void)? // peerID, hintType ("general" or "moreObvious")
+    var onHintResponseReceived: ((String, String) -> Void)? // message, hintType
+    
     // MARK: - Initialization
     
     override init() {
@@ -176,6 +182,36 @@ class MultiplayerManager: NSObject, ObservableObject {
         }
     }
     
+    // MARK: - Host-Authoritative Methods
+    
+    /// Client submits raw answer to host for validation
+    func submitRawAnswer(_ answer: String, responseTime: TimeInterval) {
+        guard !isHost else { return }
+        let message = GameMessage.rawAnswer(answer: answer, responseTime: responseTime)
+        sendToHost(message)
+    }
+    
+    /// Host sends validation result to specific client
+    func sendValidationResult(to peer: MCPeerID, isCorrect: Bool, message: String, points: Int) {
+        guard isHost else { return }
+        let validationMessage = GameMessage.validationResult(isCorrect: isCorrect, message: message, points: points)
+        sendToPeer(validationMessage, peer: peer)
+    }
+    
+    /// Client requests hint from host
+    func requestHint(hintType: String) {
+        guard !isHost else { return }
+        let message = GameMessage.hintRequest(hintType: hintType)
+        sendToHost(message)
+    }
+    
+    /// Host sends hint response to specific client
+    func sendHintResponse(to peer: MCPeerID, hint: String, hintType: String) {
+        guard isHost else { return }
+        let hintMessage = GameMessage.hintResponse(hint: hint, hintType: hintType)
+        sendToPeer(hintMessage, peer: peer)
+    }
+    
     // MARK: - Messaging
     
     private func sendToAllPeers(_ message: GameMessage) {
@@ -200,6 +236,15 @@ class MultiplayerManager: NSObject, ObservableObject {
         }
     }
     
+    private func sendToPeer(_ message: GameMessage, peer: MCPeerID) {
+        do {
+            let data = try JSONEncoder().encode(message)
+            try session.send(data, toPeers: [peer], with: .reliable)
+        } catch {
+            print("❌ Error sending to peer: \(error)")
+        }
+    }
+    
     private func handleReceivedMessage(_ data: Data, from peer: MCPeerID) {
         do {
             let message = try JSONDecoder().decode(GameMessage.self, from: data)
@@ -216,6 +261,26 @@ class MultiplayerManager: NSObject, ObservableObject {
                 case .answer(let playerID, let answer, let isCorrect, let responseTime):
                     if isHost {
                         self.onAnswerReceived?(playerID, answer, isCorrect, responseTime)
+                    }
+                    
+                case .rawAnswer(let answer, let responseTime):
+                    if self.isHost {
+                        self.onRawAnswerReceived?(peer, answer, responseTime)
+                    }
+                    
+                case .validationResult(let isCorrect, let validationMessage, let points):
+                    if !self.isHost {
+                        self.onValidationResultReceived?(isCorrect, validationMessage, points)
+                    }
+                    
+                case .hintRequest(let hintType):
+                    if self.isHost {
+                        self.onHintRequestReceived?(peer, hintType)
+                    }
+                    
+                case .hintResponse(let hint, let hintType):
+                    if !self.isHost {
+                        self.onHintResponseReceived?(hint, hintType)
                     }
                     
                 case .nextQuestion:
@@ -372,7 +437,11 @@ struct MultiplayerGameSettings: Codable {
 enum GameMessage: Codable {
     case gameStart(settings: MultiplayerGameSettings)
     case question(TriviaQuestion)
-    case answer(playerID: String, answer: String, isCorrect: Bool, responseTime: TimeInterval)
+    case answer(playerID: String, answer: String, isCorrect: Bool, responseTime: TimeInterval) // Legacy, kept for backward compatibility
+    case rawAnswer(answer: String, responseTime: TimeInterval) // Client -> Host: raw answer for validation
+    case validationResult(isCorrect: Bool, message: String, points: Int) // Host -> Client: validation result
+    case hintRequest(hintType: String) // Client -> Host: request hint
+    case hintResponse(hint: String, hintType: String) // Host -> Client: hint response
     case nextQuestion
     case leaderboard([LeaderboardEntry])
     case gameEnd

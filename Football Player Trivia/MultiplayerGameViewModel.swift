@@ -94,6 +94,23 @@ class MultiplayerGameViewModel: ObservableObject {
                 self.hostDisconnected = true
             }
         }
+        
+        // Host-authoritative callbacks
+        multiplayerManager.onRawAnswerReceived = { [weak self] peer, answer, responseTime in
+            self?.validateAnswerForClient(peer: peer, answer: answer, responseTime: responseTime)
+        }
+        
+        multiplayerManager.onValidationResultReceived = { [weak self] isCorrect, message, points in
+            self?.handleValidationResult(isCorrect: isCorrect, message: message, points: points)
+        }
+        
+        multiplayerManager.onHintRequestReceived = { [weak self] peer, hintType in
+            self?.generateHintForClient(peer: peer, hintType: hintType)
+        }
+        
+        multiplayerManager.onHintResponseReceived = { [weak self] hint, hintType in
+            self?.handleHintResponse(hint: hint, hintType: hintType)
+        }
     }
     
     // MARK: - Question Management (Host)
@@ -227,8 +244,14 @@ class MultiplayerGameViewModel: ObservableObject {
         
         let responseTime = Date().timeIntervalSince(answerStartTime ?? Date())
         
-        // Use Firebase validation for answer checking
-        validateAnswerWithFirebase(answer: answer, question: question, responseTime: responseTime)
+        if multiplayerManager.isHost {
+            // Host validates own answer locally
+            validateAnswerWithFirebase(answer: answer, question: question, responseTime: responseTime)
+        } else {
+            // Client sends raw answer to host for validation
+            multiplayerManager.submitRawAnswer(answer, responseTime: responseTime)
+            userAnswer = answer // Store for display
+        }
     }
     
     private func validateAnswerWithFirebase(answer: String, question: TriviaQuestion, responseTime: TimeInterval) {
@@ -383,6 +406,113 @@ class MultiplayerGameViewModel: ObservableObject {
         let totalPlayers = 1 + multiplayerManager.connectedPeers.count // host + peers
         if playerAnswers.count == totalPlayers {
             showLeaderboardAfterAllAnswered()
+        }
+    }
+    
+    // MARK: - Host-Authoritative Validation
+    
+    /// Host validates answer for a client
+    private func validateAnswerForClient(peer: MCPeerID, answer: String, responseTime: TimeInterval) {
+        guard multiplayerManager.isHost, let question = currentQuestion else { return }
+        guard let playerName = multiplayerManager.playerNames[peer] else { return }
+        
+        print("🎮 Host validating answer for \(playerName): '\(answer)'")
+        
+        // Get correct players
+        let limit = getPlayerLimit(for: question.position)
+        let singlePlayerPositions = ["Quarterback", "Tight End", "Kicker"]
+        let snapType: String
+        
+        if question.position == "Kicker" {
+            snapType = "special_teams"
+        } else if ["Linebacker", "Defensive Back", "Defensive Linemen"].contains(question.position) {
+            snapType = "defense"
+        } else {
+            snapType = "offense"
+        }
+        
+        let players: [Player]
+        if singlePlayerPositions.contains(question.position) {
+            if let topPlayer = DatabaseManager.shared.getTopPlayerAtPosition(
+                position: question.position,
+                year: question.year,
+                team: question.team,
+                snapType: snapType
+            ) {
+                players = [topPlayer]
+            } else {
+                players = []
+            }
+        } else {
+            players = DatabaseManager.shared.getTopPlayersAtPosition(
+                position: question.position,
+                year: question.year,
+                team: question.team,
+                limit: limit,
+                snapType: snapType
+            )
+        }
+        
+        // Validate with Firebase
+        FirebaseService.shared.validateAnswerAndProvideInfo(
+            userAnswer: answer,
+            correctPlayers: players,
+            position: question.position,
+            year: question.year,
+            team: question.team
+        ) { [weak self] result in
+            guard let self = self else { return }
+            
+            switch result {
+            case .success(let validationResponse):
+                let isCorrect = validationResponse.isCorrect
+                let message = validationResponse.message
+                
+                // Calculate points
+                let maxPoints = 10
+                let timeLimit = self.maxTimeToAnswer
+                let points = isCorrect ? max(1, maxPoints - Int((responseTime / timeLimit) * Double(maxPoints - 1))) : 0
+                
+                // Send validation result back to client
+                self.multiplayerManager.sendValidationResult(to: peer, isCorrect: isCorrect, message: message, points: points)
+                
+                // Track answer for leaderboard
+                self.playerAnswers[playerName] = PlayerAnswer(
+                    answer: answer,
+                    isCorrect: isCorrect,
+                    responseTime: responseTime,
+                    points: points
+                )
+                
+                // Check if all players have answered
+                let totalPlayers = 1 + self.multiplayerManager.connectedPeers.count
+                if self.playerAnswers.count == totalPlayers {
+                    self.showLeaderboardAfterAllAnswered()
+                }
+                
+            case .failure(let error):
+                print("❌ Firebase validation error: \(error)")
+                // Send error result
+                self.multiplayerManager.sendValidationResult(to: peer, isCorrect: false, message: "Validation error. Please try again.", points: 0)
+            }
+        }
+    }
+    
+    /// Client receives validation result from host
+    private func handleValidationResult(isCorrect: Bool, message: String, points: Int) {
+        guard !multiplayerManager.isHost else { return }
+        
+        print("📨 Client received validation: \(isCorrect ? "✅" : "❌"), Points: \(points)")
+        
+        self.lastAnswerCorrect = isCorrect
+        self.hasAnswered = true
+        self.isValidating = false
+        self.currentQuestionPoints = points
+        self.currentPlayerScore += points
+        
+        // Populate correct players for display if needed
+        if let question = currentQuestion, correctPlayers.isEmpty {
+            populateCorrectPlayersForDisplay(question: question)
         }
     }
     
@@ -671,26 +801,30 @@ class MultiplayerGameViewModel: ObservableObject {
         isLoadingMoreObviousHint = false
         showHintSheet = true
         
-        // Always get General hint first
-        FirebaseService.shared.generateHint(
-            for: correctPlayers,
-            position: question.position,
-            year: question.year,
-            team: question.team,
-            hintLevel: "General"
-        ) { [weak self] result in
-            guard let self = self else { return }
-            
-            switch result {
-            case .success(let hint):
-                print("✅ DEBUG: General hint received: \(hint.prefix(50))...")
-                self.generalHint = hint
+        if multiplayerManager.isHost {
+            // Host generates hint locally
+            FirebaseService.shared.generateHint(
+                for: correctPlayers,
+                position: question.position,
+                year: question.year,
+                team: question.team,
+                hintLevel: "General"
+            ) { [weak self] result in
+                guard let self = self else { return }
                 
-            case .failure(let error):
-                print("❌ Error generating hint: \(error.localizedDescription)")
-                // Fallback to basic hint
-                self.generalHint = "Position: \(question.position)\nTeam: \(question.team)\nYear: \(question.year)"
+                switch result {
+                case .success(let hint):
+                    print("✅ DEBUG: General hint received: \(hint.prefix(50))...")
+                    self.generalHint = hint
+                    
+                case .failure(let error):
+                    print("❌ Error generating hint: \(error.localizedDescription)")
+                    self.generalHint = "Position: \(question.position)\nTeam: \(question.team)\nYear: \(question.year)"
+                }
             }
+        } else {
+            // Client requests hint from host
+            multiplayerManager.requestHint(hintType: "general")
         }
     }
     
@@ -709,36 +843,127 @@ class MultiplayerGameViewModel: ObservableObject {
             populateCorrectPlayersForDisplay(question: question)
         }
         
-        // Call Firebase to get More Obvious hint
+        if multiplayerManager.isHost {
+            // Host generates hint locally
+            FirebaseService.shared.generateHint(
+                for: correctPlayers,
+                position: question.position,
+                year: question.year,
+                team: question.team,
+                hintLevel: "More Obvious"
+            ) { [weak self] result in
+                guard let self = self else { return }
+                self.isLoadingMoreObviousHint = false
+                
+                switch result {
+                case .success(let hint):
+                    print("✅ DEBUG: More Obvious hint received: \(hint.prefix(100))...")
+                    // More Obvious hints contain both general hint + initials/college
+                    let components = hint.components(separatedBy: "\n\n")
+                    print("🔍 DEBUG: Components count: \(components.count)")
+                    if components.count > 1 {
+                        // Use only the additional info (initials/college)
+                        print("🔍 DEBUG: Setting moreObviousHint to component[1]: \(components[1])")
+                        self.moreObviousHint = components[1]
+                    } else {
+                        // Fallback if format is different
+                        print("⚠️ DEBUG: Using full hint as moreObviousHint")
+                        self.moreObviousHint = hint
+                    }
+                    
+                case .failure(let error):
+                    print("❌ Error generating more obvious hint: \(error.localizedDescription)")
+                    self.moreObviousHint = "Unable to load more obvious hint."
+                }
+            }
+        } else {
+            // Client requests hint from host
+            multiplayerManager.requestHint(hintType: "moreObvious")
+        }
+    }
+    
+    // MARK: - Host-Authoritative Hints
+    
+    /// Host generates hint for a client
+    private func generateHintForClient(peer: MCPeerID, hintType: String) {
+        guard multiplayerManager.isHost, let question = currentQuestion else { return }
+        
+        print("🎮 Host generating \(hintType) hint for client")
+        
+        // Get correct players if needed
+        var playersToUse = correctPlayers
+        if playersToUse.isEmpty {
+            let limit = getPlayerLimit(for: question.position)
+            let singlePlayerPositions = ["Quarterback", "Tight End", "Kicker"]
+            let snapType: String
+            
+            if question.position == "Kicker" {
+                snapType = "special_teams"
+            } else if ["Linebacker", "Defensive Back", "Defensive Linemen"].contains(question.position) {
+                snapType = "defense"
+            } else {
+                snapType = "offense"
+            }
+            
+            if singlePlayerPositions.contains(question.position) {
+                if let topPlayer = DatabaseManager.shared.getTopPlayerAtPosition(
+                    position: question.position,
+                    year: question.year,
+                    team: question.team,
+                    snapType: snapType
+                ) {
+                    playersToUse = [topPlayer]
+                }
+            } else {
+                playersToUse = DatabaseManager.shared.getTopPlayersAtPosition(
+                    position: question.position,
+                    year: question.year,
+                    team: question.team,
+                    limit: limit,
+                    snapType: snapType
+                )
+            }
+        }
+        
+        let hintLevel = hintType == "moreObvious" ? "More Obvious" : "General"
+        
         FirebaseService.shared.generateHint(
-            for: correctPlayers,
+            for: playersToUse,
             position: question.position,
             year: question.year,
             team: question.team,
-            hintLevel: "More Obvious"
+            hintLevel: hintLevel
         ) { [weak self] result in
             guard let self = self else { return }
-            self.isLoadingMoreObviousHint = false
             
             switch result {
             case .success(let hint):
-                print("✅ DEBUG: More Obvious hint received: \(hint.prefix(100))...")
-                // More Obvious hints contain both general hint + initials/college
-                let components = hint.components(separatedBy: "\n\n")
-                print("🔍 DEBUG: Components count: \(components.count)")
-                if components.count > 1 {
-                    // Use only the additional info (initials/college)
-                    print("🔍 DEBUG: Setting moreObviousHint to component[1]: \(components[1])")
-                    self.moreObviousHint = components[1]
-                } else {
-                    // Fallback if format is different
-                    print("⚠️ DEBUG: Using full hint as moreObviousHint")
-                    self.moreObviousHint = hint
-                }
+                self.multiplayerManager.sendHintResponse(to: peer, hint: hint, hintType: hintType)
                 
             case .failure(let error):
-                print("❌ Error generating more obvious hint: \(error.localizedDescription)")
-                self.moreObviousHint = "Unable to load more obvious hint."
+                print("❌ Error generating hint for client: \(error)")
+                let fallbackHint = "Position: \(question.position)\nTeam: \(question.team)\nYear: \(question.year)"
+                self.multiplayerManager.sendHintResponse(to: peer, hint: fallbackHint, hintType: hintType)
+            }
+        }
+    }
+    
+    /// Client receives hint response from host
+    private func handleHintResponse(hint: String, hintType: String) {
+        guard !multiplayerManager.isHost else { return }
+        
+        print("📨 Client received \(hintType) hint from host")
+        
+        if hintType == "general" {
+            generalHint = hint
+        } else if hintType == "moreObvious" {
+            isLoadingMoreObviousHint = false
+            // More Obvious hints contain both general hint + initials/college
+            let components = hint.components(separatedBy: "\n\n")
+            if components.count > 1 {
+                moreObviousHint = components[1]
+            } else {
+                moreObviousHint = hint
             }
         }
     }
