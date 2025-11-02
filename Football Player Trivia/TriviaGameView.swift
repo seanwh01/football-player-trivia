@@ -275,20 +275,23 @@ struct TriviaGameView: View {
                         
                         // "I don't know" button - get answer with AI facts
                         Button(action: skipToAnswer) {
-                            ZStack {
-                                Image("IDontKnowButton")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 120, height: 38)
-                                    .cornerRadius(8)
-                                    .opacity(isLoadingIDontKnow ? 0.3 : (isPlayerInputActive ? 1.0 : 0.5))
-                                
+                            HStack(spacing: 5) {
                                 if isLoadingIDontKnow {
                                     ProgressView()
                                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                        .scaleEffect(0.8)
+                                        .scaleEffect(0.7)
                                 }
+                                Image(systemName: "sparkles")
+                                    .foregroundColor(.white)
+                                Text(isLoadingIDontKnow ? "Loading..." : "I Don't Know")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.white)
                             }
+                            .padding(.horizontal, 15)
+                            .padding(.vertical, 10)
+                            .background(isPlayerInputActive ? Color(red: 1.0, green: 0.4, blue: 0.7) : Color.gray)
+                            .cornerRadius(8)
                         }
                         .disabled(!isPlayerInputActive || isLoadingIDontKnow)
                         
