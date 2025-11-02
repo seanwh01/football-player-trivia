@@ -30,6 +30,7 @@ struct TriviaGameView: View {
     
     @State private var activeAlert: AlertType? = nil
     @State private var isValidatingAnswer: Bool = false
+    @State private var isLoadingIDontKnow: Bool = false
     @State private var bannerAdRefreshTrigger: Int = 0
     @State private var isReady: Bool = false
     @State private var pendingHint: (year: Int, hintLevel: String)? = nil
@@ -231,7 +232,9 @@ struct TriviaGameView: View {
                             }
                         }
                     
-                    HStack(spacing: 12) {
+                    HStack(spacing: 10) {
+                        Spacer()
+                        
                         Button(action: checkAnswer) {
                             HStack(spacing: 5) {
                                 if isValidatingAnswer {
@@ -278,18 +281,19 @@ struct TriviaGameView: View {
                                     .scaledToFit()
                                     .frame(width: 120, height: 38)
                                     .cornerRadius(8)
-                                    .opacity(isValidatingAnswer ? 0.3 : (isPlayerInputActive ? 1.0 : 0.5))
+                                    .opacity(isLoadingIDontKnow ? 0.3 : (isPlayerInputActive ? 1.0 : 0.5))
                                 
-                                if isValidatingAnswer {
+                                if isLoadingIDontKnow {
                                     ProgressView()
                                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                         .scaleEffect(0.8)
                                 }
                             }
                         }
-                        .disabled(!isPlayerInputActive || isValidatingAnswer)
+                        .disabled(!isPlayerInputActive || isLoadingIDontKnow)
+                        
+                        Spacer()
                     }
-                    .frame(maxWidth: .infinity)
                 }
                 .padding(.vertical, 10)
                 
@@ -808,7 +812,7 @@ struct TriviaGameView: View {
     private func skipToAnswer() {
         guard let yearInt = Int(selectedYear) else { return }
         
-        isValidatingAnswer = true
+        isLoadingIDontKnow = true
         isTextFieldFocused = false
         
         // Get correct players from database based on position type
@@ -853,7 +857,7 @@ struct TriviaGameView: View {
         }
         
         guard !players.isEmpty else {
-            self.isValidatingAnswer = false
+            self.isLoadingIDontKnow = false
             self.resultMessage = "❌ No player data found for this selection."
             self.isCorrect = false
             self.activeAlert = .result
@@ -868,7 +872,7 @@ struct TriviaGameView: View {
             year: yearInt,
             team: self.selectedTeam
         ) { result in
-            self.isValidatingAnswer = false
+            self.isLoadingIDontKnow = false
             
             switch result {
             case .success(let response):
