@@ -49,6 +49,7 @@ class MultiplayerGameViewModel: ObservableObject {
     private var answerStartTime: Date?
     private var playerAnswers: [String: PlayerAnswer] = [:] // Current question only
     private var cumulativeScores: [String: Int] = [:] // Tracks total scores across all questions
+    private var usedCombinations: Set<String> = [] // Tracks used position|year|team combinations to prevent duplicates
     
     var totalQuestions: Int {
         multiplayerManager.gameSettings?.questionCount ?? 12
@@ -120,6 +121,12 @@ class MultiplayerGameViewModel: ObservableObject {
         
         currentQuestionNumber += 1
         
+        // Clear used combinations at the start of a new game
+        if currentQuestionNumber == 1 {
+            usedCombinations.removeAll()
+            print("🎮 Starting new game - cleared used combinations")
+        }
+        
         // Check if game is over
         if currentQuestionNumber > totalQuestions {
             endGame()
@@ -146,56 +153,81 @@ class MultiplayerGameViewModel: ObservableObject {
     }
     
     private func generateQuestion(from settings: MultiplayerGameSettings) -> TriviaQuestion {
-        // Randomly select from settings
-        let position = settings.positions.randomElement() ?? "Quarterback"
-        let team = settings.teams.randomElement() ?? "KC"
-        let year = Int.random(in: settings.yearFrom...settings.yearTo)
+        var attempts = 0
+        let maxAttempts = 100 // Prevent infinite loop
         
-        // Query real players from database
-        let singlePlayerPositions = ["Quarterback", "Tight End", "Kicker"]
-        
-        if singlePlayerPositions.contains(position) {
-            // Get top 1 player for single-player positions
-            let snapType = position == "Kicker" ? "special_teams" : "offense"
-            if let topPlayer = DatabaseManager.shared.getTopPlayerAtPosition(
-                position: position,
-                year: year,
-                team: team,
-                snapType: snapType
-            ) {
-                return TriviaQuestion(
-                    playerFirstName: topPlayer.firstName,
-                    playerLastName: topPlayer.lastName,
-                    position: position,
-                    team: team,
-                    year: year
-                )
-            }
-        } else {
-            // Get multiple players for multi-player positions
-            let limit = getPlayerLimit(for: position)
-            let snapType = ["Linebacker", "Defensive Back", "Defensive Linemen"].contains(position) ? "defense" : "offense"
+        while attempts < maxAttempts {
+            attempts += 1
             
-            let players = DatabaseManager.shared.getTopPlayersAtPosition(
-                position: position,
-                year: year,
-                team: team,
-                limit: limit,
-                snapType: snapType
-            )
+            // Randomly select from settings
+            let position = settings.positions.randomElement() ?? "Quarterback"
+            let team = settings.teams.randomElement() ?? "KC"
+            let year = Int.random(in: settings.yearFrom...settings.yearTo)
             
-            if let randomPlayer = players.randomElement() {
-                return TriviaQuestion(
-                    playerFirstName: randomPlayer.firstName,
-                    playerLastName: randomPlayer.lastName,
-                    position: position,
-                    team: team,
-                    year: year
-                )
+            // Check if this combination has been used
+            let combo = "\(position)|\(year)|\(team)"
+            if usedCombinations.contains(combo) {
+                continue // Try another combination
             }
+            
+            // Query real players from database
+            let singlePlayerPositions = ["Quarterback", "Tight End", "Kicker"]
+            
+            if singlePlayerPositions.contains(position) {
+                // Get top 1 player for single-player positions
+                let snapType = position == "Kicker" ? "special_teams" : "offense"
+                if let topPlayer = DatabaseManager.shared.getTopPlayerAtPosition(
+                    position: position,
+                    year: year,
+                    team: team,
+                    snapType: snapType
+                ) {
+                    // Mark combination as used
+                    usedCombinations.insert(combo)
+                    print("✅ Generated unique question #\(currentQuestionNumber + 1): \(combo)")
+                    
+                    return TriviaQuestion(
+                        playerFirstName: topPlayer.firstName,
+                        playerLastName: topPlayer.lastName,
+                        position: position,
+                        team: team,
+                        year: year
+                    )
+                }
+            } else {
+                // Get multiple players for multi-player positions
+                let limit = getPlayerLimit(for: position)
+                let snapType = ["Linebacker", "Defensive Back", "Defensive Linemen"].contains(position) ? "defense" : "offense"
+                
+                let players = DatabaseManager.shared.getTopPlayersAtPosition(
+                    position: position,
+                    year: year,
+                    team: team,
+                    limit: limit,
+                    snapType: snapType
+                )
+                
+                if let randomPlayer = players.randomElement() {
+                    // Mark combination as used
+                    usedCombinations.insert(combo)
+                    print("✅ Generated unique question #\(currentQuestionNumber + 1): \(combo)")
+                    
+                    return TriviaQuestion(
+                        playerFirstName: randomPlayer.firstName,
+                        playerLastName: randomPlayer.lastName,
+                        position: position,
+                        team: team,
+                        year: year
+                    )
+                }
+            }
+            
+            // If no player found for this combination, continue to next iteration
         }
         
-        // Fallback if no player found - try another combination
+        // Fallback if max attempts reached - clear used combinations and try again
+        print("⚠️ Max attempts reached, clearing used combinations")
+        usedCombinations.removeAll()
         return generateQuestion(from: settings)
     }
     
