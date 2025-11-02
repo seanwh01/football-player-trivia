@@ -270,20 +270,14 @@ struct TriviaGameView: View {
                         }
                         .disabled(!isPlayerInputActive || isLoadingHint)
                         
-                        // "I don't know" button - skip to answer
+                        // "I don't know" button - get answer with AI facts
                         Button(action: skipToAnswer) {
-                            HStack(spacing: 5) {
-                                Image(systemName: "sparkles")
-                                    .foregroundColor(.white)
-                                Text("I Don't Know")
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(.white)
-                            }
-                            .padding(.horizontal, 15)
-                            .padding(.vertical, 10)
-                            .background(isPlayerInputActive ? Color.pink : Color.gray)
-                            .cornerRadius(8)
+                            Image("IDontKnowButton")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(height: 34)
+                                .cornerRadius(8)
+                                .opacity(isPlayerInputActive ? 1.0 : 0.5)
                         }
                         .disabled(!isPlayerInputActive || isValidatingAnswer)
                     }
@@ -806,6 +800,7 @@ struct TriviaGameView: View {
     private func skipToAnswer() {
         guard let yearInt = Int(selectedYear) else { return }
         
+        isValidatingAnswer = true
         isTextFieldFocused = false
         
         // Get correct players from database based on position type
@@ -850,22 +845,40 @@ struct TriviaGameView: View {
         }
         
         guard !players.isEmpty else {
+            self.isValidatingAnswer = false
             self.resultMessage = "❌ No player data found for this selection."
             self.isCorrect = false
             self.activeAlert = .result
             return
         }
         
-        // Format the correct answer(s)
-        let playerNames = players.map { $0.playerName }.joined(separator: ", ")
-        self.resultMessage = "The correct answer:\n\n✨ \(playerNames) ✨"
-        self.isCorrect = false
-        
-        // Increment session total but not correct count
-        self.settings.sessionTotal += 1
-        
-        // Show result
-        self.activeAlert = .result
+        // Call Firebase to get player info (pass empty string to skip validation)
+        FirebaseService.shared.validateAnswerAndProvideInfo(
+            userAnswer: "",  // Empty answer - just want info
+            correctPlayers: players,
+            position: self.selectedPosition,
+            year: yearInt,
+            team: self.selectedTeam
+        ) { result in
+            self.isValidatingAnswer = false
+            
+            switch result {
+            case .success(let response):
+                // Always mark as incorrect since user didn't answer
+                self.isCorrect = false
+                self.resultMessage = response.message
+                
+                // Increment session total but not correct count
+                self.settings.sessionTotal += 1
+                
+                self.activeAlert = .result
+                
+            case .failure(let error):
+                self.resultMessage = "❌ Error getting player info: \(error.localizedDescription)"
+                self.isCorrect = false
+                self.activeAlert = .result
+            }
+        }
     }
     
     private func getMoreObviousHint() {
