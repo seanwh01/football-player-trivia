@@ -34,7 +34,7 @@ class GameSettings: ObservableObject {
         "Placekicker"
     ]
     
-    @Published var yearFrom: Int = 2016
+    @Published var yearFrom: Int = 2025
     @Published var yearTo: Int = 2025
     
     @Published var sessionCorrect: Int = 0
