@@ -273,7 +273,8 @@ struct ContentView: View {
         }
         
         do {
-            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+            // Use .ambient category to respect the mute switch
+            try AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default)
             try AVAudioSession.sharedInstance().setActive(true)
             
             audioPlayer = try AVAudioPlayer(contentsOf: soundURL)

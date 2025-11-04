@@ -101,6 +101,10 @@ struct HalftimeShowView: View {
         }
         
         do {
+            // Use .ambient category to respect the mute switch
+            try AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default)
+            try AVAudioSession.sharedInstance().setActive(true)
+            
             audioPlayer = try AVAudioPlayer(contentsOf: url)
             audioPlayer?.numberOfLoops = 0 // Play once
             audioPlayer?.volume = 0.5
